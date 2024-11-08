@@ -9,10 +9,32 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     // Fetch all surveys
+    fetchSurveys();
+  }, []);
+
+  const fetchSurveys = () => {
     fetch("/api/surveys")
       .then((res) => res.json())
       .then((data) => setSurveys(data));
-  }, []);
+  };
+
+  const handleDeleteSurvey = async (id: number) => {
+    const confirmed = confirm("Are you sure you want to delete this survey?");
+    if (confirmed) {
+      try {
+        const res = await fetch(`/api/surveys/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          // Update local state to remove the deleted survey
+          setSurveys(surveys.filter((survey) => survey.id !== id));
+          alert("Survey deleted successfully");
+        } else {
+          console.error("Failed to delete survey");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -35,7 +57,7 @@ export default function AdminDashboard() {
             <h2 className="text-xl font-bold mb-2">{survey.title}</h2>
             <p className="text-sm mb-3">{survey.description}</p>
 
-            {/* Buttons to Edit Survey and View Results */}
+            {/* Buttons to Edit, View Results, and Delete Survey */}
             <div className="flex gap-4">
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
@@ -49,6 +71,13 @@ export default function AdminDashboard() {
                 onClick={() => router.push(`/admin/results/${survey.id}`)}
               >
                 View Results
+              </button>
+
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500 transition"
+                onClick={() => handleDeleteSurvey(survey.id)}
+              >
+                Delete Survey
               </button>
             </div>
           </div>

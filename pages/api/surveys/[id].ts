@@ -8,13 +8,19 @@ const dataFilePath = path.join(process.cwd(), 'data', 'surveys.json');
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
-  const surveys = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
+  if (req.method === 'DELETE') {
+    try {
+      const surveys = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
+      const filteredSurveys = surveys.filter((survey: { id: number }) => survey.id !== parseInt(id as string));
 
-  const survey = surveys.find((s: any) => s.id === parseInt(id as string));
-
-  if (!survey) {
-    return res.status(404).json({ error: 'Survey not found' });
+      fs.writeFileSync(dataFilePath, JSON.stringify(filteredSurveys, null, 2));
+      res.status(200).json({ message: 'Survey deleted successfully' });
+    } catch (error) {
+      console.error("Error deleting survey:", error);
+      res.status(500).json({ error: 'Failed to delete survey' });
+    }
+  } else {
+    res.setHeader('Allow', ['DELETE']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-
-  res.status(200).json(survey);
 }
