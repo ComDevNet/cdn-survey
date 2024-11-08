@@ -1,18 +1,19 @@
 type FileUploadProps = {
-    question: string;
-    onChange: (value: File | null) => void;
+  onChange: (file: File | null) => void;
+};
+
+export default function FileUpload({ onChange }: FileUploadProps) {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      onChange(event.target.files[0]);
+    } else {
+      onChange(null);
+    }
   };
-  
-  export default function FileUpload({ question, onChange }: FileUploadProps) {
-    return (
-      <div className="mb-4">
-        <label className="block mb-2 font-medium">{question}</label>
-        <input
-          type="file"
-          className="border px-2 py-1 rounded"
-          onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)}
-        />
-      </div>
-    );
-  }
-  
+
+  return (
+    <div>
+      <input type="file" onChange={handleFileChange} className="block mt-2" />
+    </div>
+  );
+}

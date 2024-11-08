@@ -5,22 +5,46 @@ import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'data', 'surveys.json');
 
+const readSurveys = () => JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
+const writeSurveys = (surveys: any) => fs.writeFileSync(dataFilePath, JSON.stringify(surveys, null, 2), 'utf-8');
+
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
-  if (req.method === 'DELETE') {
-    try {
-      const surveys = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
-      const filteredSurveys = surveys.filter((survey: { id: number }) => survey.id !== parseInt(id as string));
+  if (typeof id !== 'string') {
+    return res.status(400).json({ error: 'Invalid survey ID' });
+  }
 
-      fs.writeFileSync(dataFilePath, JSON.stringify(filteredSurveys, null, 2));
-      res.status(200).json({ message: 'Survey deleted successfully' });
-    } catch (error) {
-      console.error("Error deleting survey:", error);
-      res.status(500).json({ error: 'Failed to delete survey' });
+  try {
+    let surveys = readSurveys();
+
+    if (req.method === 'PUT') {
+      // Find and update the survey
+      const surveyIndex = surveys.findIndex((survey: any) => String(survey.id) === id);
+      if (surveyIndex === -1) {
+        return res.status(404).json({ error: 'Survey not found' });
+      }
+      surveys[surveyIndex] = req.body; // Update with new data
+      writeSurveys(surveys);
+      return res.status(200).json({ message: 'Survey updated successfully' });
+    } 
+    
+    if (req.method === 'GET') {
+      const survey = surveys.find((survey: any) => String(survey.id) === id);
+      if (!survey) return res.status(404).json({ error: 'Survey not found' });
+      return res.status(200).json(survey);
     }
-  } else {
-    res.setHeader('Allow', ['DELETE']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    if (req.method === 'DELETE') {
+      surveys = surveys.filter((survey: any) => String(survey.id) !== id);
+      writeSurveys(surveys);
+      return res.status(200).json({ message: 'Survey deleted successfully' });
+    }
+
+    res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  } catch (error) {
+    console.error('Error handling surveys:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

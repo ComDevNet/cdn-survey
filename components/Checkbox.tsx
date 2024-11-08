@@ -1,32 +1,29 @@
 type CheckboxProps = {
-  question: string;
   options: string[];
-  selectedOptions: string[]; // Track selected options
+  selectedOptions: string[];
   onChange: (value: string[]) => void;
 };
 
-export default function Checkbox({ question, options, selectedOptions, onChange }: CheckboxProps) {
+export default function Checkbox({ options, selectedOptions, onChange }: CheckboxProps) {
   const handleCheckboxChange = (option: string) => {
     const updatedOptions = selectedOptions.includes(option)
       ? selectedOptions.filter((item) => item !== option)
       : [...selectedOptions, option];
-    
-    onChange(updatedOptions); // Pass the updated array directly
+    onChange(updatedOptions);
   };
 
   return (
-    <div className="mb-4">
-      <label className="block mb-2 font-medium">{question}</label>
+    <div>
       {options.map((option, index) => (
         <div key={index}>
           <input
             type="checkbox"
-            id={`${question}-${index}`}
+            id={`checkbox-${index}`}
             value={option}
-            checked={selectedOptions.includes(option)} // Set checked based on selected options
+            checked={selectedOptions.includes(option)}
             onChange={() => handleCheckboxChange(option)}
           />
-          <label htmlFor={`${question}-${index}`} className="ml-2">
+          <label htmlFor={`checkbox-${index}`} className="ml-2">
             {option}
           </label>
         </div>

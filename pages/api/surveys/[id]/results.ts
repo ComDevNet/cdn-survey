@@ -2,7 +2,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
-import { IncomingForm, Fields, Files } from 'formidable';
+import formidable, { IncomingForm, Fields, Files } from 'formidable';
 import { createObjectCsvWriter } from 'csv-writer';
 import csvParser from 'csv-parser';
 
@@ -14,10 +14,16 @@ export const config = {
 };
 
 const dataDirectory = path.join(process.cwd(), 'data');
+const uploadsDir = path.join(dataDirectory, 'uploads');
+
+// Ensure the uploads directory exists
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Helper function to parse form data with formidable
 const parseForm = (req: NextApiRequest): Promise<{ fields: Fields; files: Files }> => {
-  const form = new IncomingForm({ uploadDir: dataDirectory, keepExtensions: true });
+  const form = new IncomingForm({ uploadDir: uploadsDir, keepExtensions: true });
   
   return new Promise((resolve, reject) => {
     form.parse(req, (err, fields, files) => {
@@ -49,7 +55,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     if (req.method === 'POST') {
       // Parse the incoming form data with formidable
-      const { fields } = await parseForm(req);
+      const { fields, files } = await parseForm(req);
+
+      // Process uploaded files and save the internal data/uploads path in the fields
+      for (const key in files) {
+        const file = files[key] as formidable.File | formidable.File[];
+        if (Array.isArray(file)) {
+          // Multiple files: Map to their respective internal paths
+          (fields as any)[key] = file.map(f => `data/uploads/${path.basename(f.filepath)}`);
+        } else if (file) {
+          // Single file: Store as a single string with the internal path
+          (fields as any)[key] = `data/uploads/${path.basename(file.filepath)}`;
+        }
+      }
 
       // Ensure the data directory exists
       if (!fs.existsSync(dataDirectory)) {
@@ -59,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Define the path to the results CSV file
       const filePath = path.join(dataDirectory, `${id}-results.csv`);
 
-      // If the file doesn't exist, create it with headers based on questions
+      // Prepare headers based on fields' keys
       const isFileExists = fs.existsSync(filePath);
       const headers = Object.keys(fields).map((key) => ({ id: key, title: key }));
 
@@ -69,25 +87,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         append: isFileExists, // Only append if file already exists
       });
 
-      // Write headers only if the file is being created for the first time
       if (!isFileExists) {
-        await csvWriter.writeRecords([]); // This ensures headers are added on the first row
+        await csvWriter.writeRecords([]); // Ensure headers are added on the first row if new
       }
 
-      // Append the actual response data to the CSV
+      // Write actual data to the CSV
       await csvWriter.writeRecords([fields]);
       return res.status(201).json({ message: 'Results saved successfully' });
 
     } else if (req.method === 'GET') {
-      // Define the path to the results CSV file
       const filePath = path.join(dataDirectory, `${id}-results.csv`);
 
-      // Check if the file exists
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: 'Results not found' });
       }
 
-      // Read and parse CSV results
       const results = await readResultsFile(filePath);
       return res.status(200).json(results);
 

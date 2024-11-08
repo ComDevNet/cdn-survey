@@ -13,7 +13,9 @@ export default function CreateSurvey() {
     options?: string[];
   }
 
-  const [formFields, setFormFields] = useState<FormField[]>([{ type: 'text', question: '', required: false, options: [] }]);
+  const [formFields, setFormFields] = useState<FormField[]>([
+    { type: 'text', question: '', required: false, options: [] }
+  ]);
   const router = useRouter();
 
   const addField = (type: string) => {
@@ -92,7 +94,6 @@ export default function CreateSurvey() {
       <h1 className="text-2xl font-bold mb-4">Create Survey</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         
-        {/* Title Input Field */}
         <div>
           <label>Survey Title *</label>
           <input
@@ -105,7 +106,6 @@ export default function CreateSurvey() {
           />
         </div>
         
-        {/* Description Input Field */}
         <div>
           <label>Survey Description *</label>
           <textarea
@@ -118,7 +118,6 @@ export default function CreateSurvey() {
           />
         </div>
         
-        {/* Dynamic Form Fields for Questions */}
         {formFields.map((field, index) => (
           <div key={index} className="space-y-2 border border-gray-300 p-4 rounded">
             <div className="flex items-center justify-between">
@@ -158,27 +157,20 @@ export default function CreateSurvey() {
               <option value="textarea">Textarea</option>
               <option value="radio">Radio Button</option>
               <option value="checkbox">Checkbox</option>
+              <option value="date">Date Picker</option>
+              <option value="number">Number Input</option>
+              <option value="file">File Upload</option>
+              <option value="email">Email Input</option>
             </select>
 
-            {field.type === 'textarea' ? (
-              <textarea
-                value={field.question}
-                onChange={(e) => handleFieldChange(index, 'question', e.target.value)}
-                className="border px-2 py-1 rounded w-full"
-                placeholder="Enter question text"
-                rows={4}
-              />
-            ) : (
-              <input
-                type="text"
-                value={field.question}
-                onChange={(e) => handleFieldChange(index, 'question', e.target.value)}
-                className="border px-2 py-1 rounded w-full"
-                placeholder="Enter question text"
-              />
-            )}
+            <input
+              type="text"
+              value={field.question}
+              onChange={(e) => handleFieldChange(index, 'question', e.target.value)}
+              className="border px-2 py-1 rounded w-full"
+              placeholder="Enter question text"
+            />
 
-            {/* Checkbox for setting the question as required */}
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -188,7 +180,6 @@ export default function CreateSurvey() {
               <label>Required</label>
             </div>
 
-            {/* Render Options for Radio and Checkbox */}
             {(field.type === 'radio' || field.type === 'checkbox') && (
               <div>
                 <label>Options:</label>
@@ -222,48 +213,38 @@ export default function CreateSurvey() {
           </div>
         ))}
         
-        {/* Buttons for Adding Fields */}
         <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => addField('text')}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
+          <button type="button" onClick={() => addField('text')} className="px-4 py-2 bg-blue-600 text-white rounded">
             Add Text Field
           </button>
-          <button
-            type="button"
-            onClick={() => addField('textarea')}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
+          <button type="button" onClick={() => addField('textarea')} className="px-4 py-2 bg-blue-600 text-white rounded">
             Add Textarea
           </button>
-          <button
-            type="button"
-            onClick={() => addField('radio')}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
+          <button type="button" onClick={() => addField('radio')} className="px-4 py-2 bg-blue-600 text-white rounded">
             Add Radio Button
           </button>
-          <button
-            type="button"
-            onClick={() => addField('checkbox')}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
+          <button type="button" onClick={() => addField('checkbox')} className="px-4 py-2 bg-blue-600 text-white rounded">
             Add Checkbox
+          </button>
+          <button type="button" onClick={() => addField('date')} className="px-4 py-2 bg-blue-600 text-white rounded">
+            Add Date Picker
+          </button>
+          <button type="button" onClick={() => addField('number')} className="px-4 py-2 bg-blue-600 text-white rounded">
+            Add Number Input
+          </button>
+          <button type="button" onClick={() => addField('file')} className="px-4 py-2 bg-blue-600 text-white rounded">
+            Add File Upload
+          </button>
+          <button type="button" onClick={() => addField('email')} className="px-4 py-2 bg-blue-600 text-white rounded">
+            Add Email Input
           </button>
         </div>
 
-        {/* Submit and Cancel Buttons */}
         <div className="flex space-x-4 mt-6">
           <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded">
             Create Survey
           </button>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-4 py-2 bg-gray-600 text-white rounded"
-          >
+          <button type="button" onClick={handleCancel} className="px-4 py-2 bg-gray-600 text-white rounded">
             Cancel
           </button>
         </div>

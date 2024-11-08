@@ -1,17 +1,13 @@
 type TextAreaProps = {
-    question: string;
-    onChange: (value: string) => void;
-  };
-  
-  export default function TextArea({ question, onChange }: TextAreaProps) {
-    return (
-      <div className="mb-4">
-        <label className="block mb-2 font-medium">{question}</label>
-        <textarea
-          className="border px-2 py-1 rounded w-full"
-          onChange={(e) => onChange(e.target.value)}
-        />
-      </div>
-    );
-  }
-  
+  onChange: (value: string) => void;
+};
+
+export default function TextArea({ onChange }: TextAreaProps) {
+  return (
+    <textarea
+      onChange={(e) => onChange(e.target.value)}
+      className="border px-2 py-1 rounded w-full mt-2"
+      rows={4}
+    />
+  );
+}

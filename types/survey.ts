@@ -26,6 +26,18 @@ export interface CheckboxField {
   required?: boolean;
 }
 
+export interface DateField {
+  type: "date";
+  question: string;
+  required?: boolean;
+}
+
+export interface NumberField {
+  type: "number";
+  question: string;
+  required?: boolean;
+}
+
 export interface FileUploadField {
   type: "file";
   question: string;
@@ -43,6 +55,8 @@ export type SurveyField =
   | TextAreaField
   | RadioButtonField
   | CheckboxField
+  | DateField
+  | NumberField
   | FileUploadField
   | EmailField;
 
