@@ -33,6 +33,7 @@ export default function AdminDashboard() {
         {surveys.map((survey) => (
           <div key={survey.id} className="p-4 border rounded-lg shadow">
             <h2 className="text-xl font-bold mb-2">{survey.title}</h2>
+            <p className="text-sm mb-3">{survey.description}</p>
 
             {/* Buttons to Edit Survey and View Results */}
             <div className="flex gap-4">

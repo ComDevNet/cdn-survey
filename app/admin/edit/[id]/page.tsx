@@ -40,7 +40,6 @@ export default function EditSurveyPage() {
     router.push('/admin');
   };
 
-  // Function to add a new question
   const addQuestion = () => {
     if (survey) {
       const newQuestion: SurveyField = { type: 'text', question: '' };
@@ -51,7 +50,6 @@ export default function EditSurveyPage() {
     }
   };
 
-  // Function to delete a question
   const deleteQuestion = (index: number) => {
     if (survey) {
       const updatedFields = survey.formFields.filter((_, i) => i !== index);
@@ -67,13 +65,44 @@ export default function EditSurveyPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Edit Survey: {survey.title}</h1>
+      <h1 className="text-2xl font-bold mb-4">Edit Survey</h1>
       
       <form onSubmit={handleUpdateSurvey} className="space-y-4">
+        {/* Title Input */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Survey Title</label>
+          <input
+            type="text"
+            value={survey.title}
+            onChange={(e) =>
+              setSurvey({ ...survey, title: e.target.value })
+            }
+            className="border px-2 py-1 rounded w-full"
+            placeholder="Enter survey title"
+          />
+        </div>
+
+        {/* Description Input */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Survey Description</label>
+          <textarea
+            value={survey.description || ''}
+            onChange={(e) =>
+              setSurvey({ ...survey, description: e.target.value })
+            }
+            className="border px-2 py-1 rounded w-full"
+            placeholder="Enter survey description"
+            rows={4}
+          />
+        </div>
+
+        {/* Questions */}
         {survey.formFields.map((field, index) => (
           <div key={index} className="flex items-center space-x-4">
             <div className="flex-grow">
-              <label>Question {index + 1}</label>
+              <label className="block text-sm font-medium mb-1">
+                Question {index + 1}
+              </label>
               <input
                 type="text"
                 value={field.question}
@@ -98,6 +127,7 @@ export default function EditSurveyPage() {
           </div>
         ))}
 
+        {/* Add Question Button */}
         <button
           type="button"
           onClick={addQuestion}
@@ -106,11 +136,19 @@ export default function EditSurveyPage() {
           Add Question
         </button>
 
+        {/* Submit and Cancel Buttons */}
         <div className="flex space-x-4 mt-6">
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
             Update Survey
           </button>
-          <button type="button" onClick={handleCancel} className="px-4 py-2 bg-gray-600 text-white rounded">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-4 py-2 bg-gray-600 text-white rounded"
+          >
             Cancel
           </button>
         </div>

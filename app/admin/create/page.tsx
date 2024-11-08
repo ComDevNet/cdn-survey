@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function CreateSurvey() {
-  const [title, setTitle] = useState(''); 
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState(''); // New state for description
   const [formFields, setFormFields] = useState([{ type: 'text', question: '' }]);
   const router = useRouter();
 
@@ -12,11 +13,11 @@ export default function CreateSurvey() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Send survey creation data to the backend with title
+    // Send survey creation data to the backend with title and description
     await fetch('/api/surveys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, formFields }), 
+      body: JSON.stringify({ title, description, formFields }), // Include description in payload
     });
 
     router.push('/admin');
@@ -29,13 +30,27 @@ export default function CreateSurvey() {
         
         {/* Title Input Field */}
         <div>
-          <label>Survey Title</label>
+          <label>Survey Title *</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="border px-2 py-1 rounded w-full"
             placeholder="Enter survey title"
+            required
+          />
+        </div>
+        
+        {/* Description Input Field */}
+        <div>
+          <label>Survey Description *</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="border px-2 py-1 rounded w-full"
+            placeholder="Enter survey description"
+            rows={4}
+            required
           />
         </div>
         
