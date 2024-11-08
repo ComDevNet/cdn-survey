@@ -1,5 +1,5 @@
 'use client';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import TextInput from '../../../components/TextInput';
 import TextArea from '../../../components/TextArea';
@@ -10,6 +10,7 @@ import { Survey, SurveyField, RadioButtonField, CheckboxField } from '../../../t
 
 export default function SurveyPage() {
   const params = useParams();
+  const router = useRouter(); // Add useRouter hook
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [responses, setResponses] = useState<Record<string, any>>({});
@@ -37,12 +38,22 @@ export default function SurveyPage() {
     return error;
   };
 
+  const handleCheckboxChange = (question: string, option: string) => {
+    setResponses((prevResponses) => {
+      const selectedOptions = prevResponses[question] || [];
+      const updatedOptions = selectedOptions.includes(option)
+        ? selectedOptions.filter((item: string) => item !== option)
+        : [...selectedOptions, option];
+      return { ...prevResponses, [question]: updatedOptions };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setSuccessMessage('');
     setErrorMessage('');
-
+  
     const newErrors: Record<string, string> = {};
     survey?.formFields.forEach((field) => {
       const error = validateField(field, responses[field.question]);
@@ -50,28 +61,40 @@ export default function SurveyPage() {
         newErrors[field.question] = error;
       }
     });
-
+  
     if (Object.keys(newErrors).length === 0) {
       try {
         const formData = new FormData();
-        
-        Object.entries(responses).forEach(([key, value]) => {
-          if (value instanceof File) {
-            formData.append(key, value);
+  
+        // Process responses to handle unselected checkboxes and radio buttons
+        survey?.formFields.forEach((field) => {
+          const responseValue = responses[field.question];
+  
+          if (field.type === 'checkbox') {
+            formData.append(field.question, Array.isArray(responseValue) && responseValue.length > 0 ? responseValue.join(', ') : "");
+          } else if (field.type === 'radio') {
+            formData.append(field.question, responseValue || "");
+          } else if (responseValue instanceof File) {
+            formData.append(field.question, responseValue);
+          } else if (field.type === 'textarea') {
+            // Replace newline characters with commas for textarea fields
+            const formattedResponse = String(responseValue || "").replace(/\n/g, ", ");
+            formData.append(field.question, formattedResponse);
           } else {
-            formData.append(key, String(value));
+            formData.append(field.question, String(responseValue || ""));
           }
         });
-
+  
         console.log("FormData submission: ", formData);
-
+  
         const response = await fetch(`/api/surveys/${id}/results`, {
           method: 'POST',
           body: formData,
         });
-
+  
         if (response.ok) {
           setSuccessMessage('Survey submitted successfully!');
+          setTimeout(() => router.push('/'), 2000); // Redirect to home page after 2 seconds
         } else {
           setErrorMessage('Failed to submit survey. Please try again.');
         }
@@ -85,6 +108,7 @@ export default function SurveyPage() {
       setIsLoading(false);
     }
   };
+  
 
   if (!survey) return <p>Loading survey...</p>;
 
@@ -96,33 +120,59 @@ export default function SurveyPage() {
       {errorMessage && <p className="text-red-500">{errorMessage}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
         {survey.formFields.map((field, index) => {
-          const FieldComponent =
-            field.type === 'text'
-              ? TextInput
-              : field.type === 'textarea'
-              ? TextArea
-              : field.type === 'radio'
-              ? RadioButton
-              : field.type === 'checkbox'
-              ? Checkbox
-              : field.type === 'file'
-              ? FileUpload
-              : null;
-
-          return (
-            FieldComponent && (
+          if (field.type === 'checkbox') {
+            const checkboxField = field as CheckboxField;
+            return (
               <div key={index} className="mb-4">
-                <FieldComponent
-                  question={field.question}
-                  options={'options' in field ? (field as RadioButtonField | CheckboxField).options ?? [] : []}
-                  onChange={(value) => setResponses({ ...responses, [field.question]: value })}
+                <Checkbox
+                  question={checkboxField.question}
+                  options={checkboxField.options}
+                  selectedOptions={responses[checkboxField.question] || []}
+                  onChange={(updatedOptions) => setResponses({ ...responses, [checkboxField.question]: updatedOptions })}
                 />
-                {errors[field.question] && (
-                  <p className="text-red-500">{errors[field.question]}</p>
+                {errors[checkboxField.question] && (
+                  <p className="text-red-500">{errors[checkboxField.question]}</p>
                 )}
               </div>
-            )
-          );
+            );
+          } else if (field.type === 'radio') {
+            const radioField = field as RadioButtonField;
+            return (
+              <div key={index} className="mb-4">
+                <RadioButton
+                  question={radioField.question}
+                  options={radioField.options}
+                  onChange={(value) => setResponses({ ...responses, [radioField.question]: value })}
+                />
+                {errors[radioField.question] && (
+                  <p className="text-red-500">{errors[radioField.question]}</p>
+                )}
+              </div>
+            );
+          } else {
+            const FieldComponent =
+              field.type === 'text'
+                ? TextInput
+                : field.type === 'textarea'
+                ? TextArea
+                : field.type === 'file'
+                ? FileUpload
+                : null;
+
+            return (
+              FieldComponent && (
+                <div key={index} className="mb-4">
+                  <FieldComponent
+                    question={field.question}
+                    onChange={(value) => setResponses({ ...responses, [field.question]: value })}
+                  />
+                  {errors[field.question] && (
+                    <p className="text-red-500">{errors[field.question]}</p>
+                  )}
+                </div>
+              )
+            );
+          }
         })}
         <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
           Submit Survey
