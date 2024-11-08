@@ -61,6 +61,7 @@ export type SurveyField =
   | EmailField;
 
 export interface Survey {
+  visible: any;
   id: number;
   title: string;
   description: string;

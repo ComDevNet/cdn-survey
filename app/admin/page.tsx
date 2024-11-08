@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Survey } from "../../types/survey";
@@ -36,6 +36,27 @@ export default function AdminDashboard() {
     }
   };
 
+  const toggleVisibility = async (id: number, currentVisibility: boolean) => {
+    try {
+      const res = await fetch(`/api/surveys/${id}/toggle-visibility`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visible: !currentVisibility })
+      });
+      if (res.ok) {
+        // Update local state to reflect the new visibility
+        setSurveys(surveys.map(survey => 
+          survey.id === id ? { ...survey, visible: !currentVisibility } : survey
+        ));
+        alert(`Survey ${!currentVisibility ? "shown" : "hidden"} successfully`);
+      } else {
+        console.error("Failed to toggle visibility");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-4">Admin Dashboard</h1>
@@ -56,8 +77,11 @@ export default function AdminDashboard() {
           <div key={survey.id} className="p-4 border rounded-lg shadow">
             <h2 className="text-xl font-bold mb-2">{survey.title}</h2>
             <p className="text-sm mb-3">{survey.description}</p>
+            <p className="text-sm mb-3">
+              Status: {survey.visible ? "Visible" : "Hidden"}
+            </p>
 
-            {/* Buttons to Edit, View Results, and Delete Survey */}
+            {/* Buttons to Edit, View Results, Delete Survey, and Toggle Visibility */}
             <div className="flex gap-4">
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
@@ -78,6 +102,15 @@ export default function AdminDashboard() {
                 onClick={() => handleDeleteSurvey(survey.id)}
               >
                 Delete Survey
+              </button>
+
+              <button
+                className={`px-4 py-2 rounded hover:bg-gray-500 transition ${
+                  survey.visible ? "bg-gray-600" : "bg-gray-400"
+                } text-white`}
+                onClick={() => toggleVisibility(survey.id, survey.visible)}
+              >
+                {survey.visible ? "Hide" : "Show"}
               </button>
             </div>
           </div>
