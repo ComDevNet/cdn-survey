@@ -9,7 +9,7 @@ export default function CreateSurvey() {
   interface FormField {
     type: string;
     question: string;
-    required: boolean; // Add required property
+    required: boolean;
     options?: string[];
   }
 
@@ -57,6 +57,22 @@ export default function CreateSurvey() {
     setFormFields(formFields.filter((_, i) => i !== index));
   };
 
+  const moveQuestionUp = (index: number) => {
+    if (index > 0) {
+      const newFormFields = [...formFields];
+      [newFormFields[index - 1], newFormFields[index]] = [newFormFields[index], newFormFields[index - 1]];
+      setFormFields(newFormFields);
+    }
+  };
+
+  const moveQuestionDown = (index: number) => {
+    if (index < formFields.length - 1) {
+      const newFormFields = [...formFields];
+      [newFormFields[index], newFormFields[index + 1]] = [newFormFields[index + 1], newFormFields[index]];
+      setFormFields(newFormFields);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await fetch('/api/surveys', {
@@ -68,7 +84,7 @@ export default function CreateSurvey() {
   };
 
   const handleCancel = () => {
-    router.push('/admin'); // Navigate back to the admin page
+    router.push('/admin');
   };
 
   return (
@@ -107,13 +123,31 @@ export default function CreateSurvey() {
           <div key={index} className="space-y-2 border border-gray-300 p-4 rounded">
             <div className="flex items-center justify-between">
               <label>Question {index + 1}</label>
-              <button
-                type="button"
-                onClick={() => deleteQuestion(index)}
-                className="px-2 py-1 bg-red-600 text-white rounded"
-              >
-                Delete Question
-              </button>
+              <div className="space-x-2">
+                <button
+                  type="button"
+                  onClick={() => moveQuestionUp(index)}
+                  className="px-2 py-1 bg-gray-400 text-white rounded"
+                  disabled={index === 0}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveQuestionDown(index)}
+                  className="px-2 py-1 bg-gray-400 text-white rounded"
+                  disabled={index === formFields.length - 1}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteQuestion(index)}
+                  className="px-2 py-1 bg-red-600 text-white rounded"
+                >
+                  Delete Question
+                </button>
+              </div>
             </div>
             <select
               value={field.type}
