@@ -31,7 +31,7 @@ export default function SurveyPage() {
   const validateField = (field: SurveyField, value: any) => {
     let error = '';
     if (field.required && !value) {
-      error = `${field.question} is required`;
+      error = `Question is required`;
     } else if (field.type === 'email' && value && !/\S+@\S+\.\S+/.test(value)) {
       error = 'Please enter a valid email address';
     }
