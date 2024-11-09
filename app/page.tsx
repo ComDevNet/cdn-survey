@@ -13,6 +13,8 @@ export default function HomePage() {
       .then((data) => setSurveys(data));
   }, []);
 
+  const visibleSurveys = surveys.filter(survey => survey.visible); // Filter surveys with visible set to true
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-4">Welcome to the CDN Survey</h1>
@@ -28,11 +30,10 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* List of Surveys */}
+      {/* List of Surveys or No Surveys Message */}
       <div className="grid gap-4">
-        {surveys
-          .filter(survey => survey.visible)  // Only show surveys with visible set to true
-          .map((survey) => (
+        {visibleSurveys.length > 0 ? (
+          visibleSurveys.map((survey) => (
             <div key={survey.id} className="p-4 border rounded-lg shadow">
               <h2 className="text-xl font-bold">{survey.title}</h2>
               <p>{survey.description}</p>
@@ -43,7 +44,10 @@ export default function HomePage() {
                 Take Survey
               </button>
             </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-gray-600 text-center">No surveys available at the moment. Please check back later.</p>
+        )}
       </div>
     </div>
   );
