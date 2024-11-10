@@ -149,7 +149,7 @@ export default function CreateSurvey() {
               onChange={(e) => setDescription(e.target.value)}
               className="border-2 px-3 py-3 rounded-xl w-full mt-3 border-gray-600"
               placeholder="Enter survey description"
-              rows={4}
+              rows={6}
               required
             />
           </div>
