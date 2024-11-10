@@ -15,6 +15,8 @@ DESTINATION="/etc/systemd/system/"
 echo "Installing dependencies..."
 npm install
 
+npm run build
+
 # Copy the service file to the systemd directory
 sudo cp $SOURCE $DESTINATION
 
