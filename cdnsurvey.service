@@ -1,0 +1,14 @@
+[Unit]
+Description=CDN Survey, a simple way to take surveys offline.
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/pi/cdn-survey
+Environment=NODE_ENV=production
+ExecStart=npm run start
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
