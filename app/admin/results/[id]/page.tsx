@@ -1,9 +1,10 @@
 // /pages/admin/results/[id].tsx
 "use client";
-import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
+import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import { FaDownload } from "react-icons/fa";
 
 type SurveyResult = {
   [question: string]: string;
@@ -17,15 +18,21 @@ export default function ResultsPage() {
   const [progress, setProgress] = useState<number | null>(null); // State to track zipping progress
 
   const parseCSV = (text: string) => {
-    const lines = text.split('\n').filter(Boolean);
+    const lines = text.split("\n").filter(Boolean);
     const headerLine = lines.shift();
     if (!headerLine) return [];
-    const headers = headerLine.match(/(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g)?.map(header => header.replace(/^,|^"|"$/g, '').trim()) || [];
-    return lines.map(line => {
-      const values = line.match(/(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g)?.map(value => value.replace(/^,|^"|"$/g, '').trim()) || [];
+    const headers =
+      headerLine
+        .match(/(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g)
+        ?.map((header) => header.replace(/^,|^"|"$/g, "").trim()) || [];
+    return lines.map((line) => {
+      const values =
+        line
+          .match(/(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g)
+          ?.map((value) => value.replace(/^,|^"|"$/g, "").trim()) || [];
       const result: Record<string, string> = {};
       headers.forEach((header, index) => {
-        result[header] = values[index] || '';
+        result[header] = values[index] || "";
       });
       return result;
     });
@@ -41,7 +48,7 @@ export default function ResultsPage() {
           setLoading(false);
         })
         .catch((error) => {
-          console.error('Error fetching results:', error);
+          console.error("Error fetching results:", error);
           setLoading(false);
         });
     }
@@ -76,11 +83,12 @@ export default function ResultsPage() {
             filePromises.push(
               fetch(filePath)
                 .then((res) => {
-                  if (!res.ok) throw new Error(`Failed to fetch file: ${filePath}`);
+                  if (!res.ok)
+                    throw new Error(`Failed to fetch file: ${filePath}`);
                   return res.blob();
                 })
                 .then((blob) => {
-                  zip.file(`data/uploads/${fileName}`, blob);  // Store file in zip as-is
+                  zip.file(`data/uploads/${fileName}`, blob); // Store file in zip as-is
                 })
             );
           }
@@ -92,31 +100,36 @@ export default function ResultsPage() {
     await Promise.all(filePromises);
 
     // Generate the zip file with progress feedback
-    zip.generateAsync(
-      { type: "blob" },
-      (metadata) => {
+    zip
+      .generateAsync({ type: "blob" }, (metadata) => {
         // Update progress based on metadata percent
         setProgress(Math.round(metadata.percent));
-      }
-    ).then((blob) => {
-      saveAs(blob, `survey_${id}_results.zip`);
-      setProgress(null); // Reset progress after completion
-    }).catch((error) => {
-      console.error("Error generating zip file:", error);
-      alert("Failed to save results. Please try again.");
-      setProgress(null);
-    });
+      })
+      .then((blob) => {
+        saveAs(blob, `survey_${id}_results.zip`);
+        setProgress(null); // Reset progress after completion
+      })
+      .catch((error) => {
+        console.error("Error generating zip file:", error);
+        alert("Failed to save results. Please try again.");
+        setProgress(null);
+      });
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading)
+    return (
+      <p className="text=center text-2xl container mt-20 mx-auto">Loading...</p>
+    );
 
   if (results.length === 0) {
     return (
-      <div className="container mx-auto p-4 text-center">
-        <p className="text-lg">No results available for this survey.</p>
+      <div className="container mx-auto p-4 text-center mt-14">
+        <p className="text-lg font-semibold">
+          No results available for this survey.
+        </p>
         <button
-          onClick={() => router.push('/admin')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+          onClick={() => router.push("/admin")}
+          className="mt-5 px-5 py-3 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 transition duration-150"
         >
           Return to Admin
         </button>
@@ -127,59 +140,65 @@ export default function ResultsPage() {
   const headers = Object.keys(results[0]);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Survey Results</h1>
+    <div className="container mx-auto p-4 mt-10 mb-5">
+      <div className="bg-white p-5 mb-10 rounded-2xl">
+        <h1 className="text-4xl font-bold mb-5 text-center">Survey Results</h1>
 
-      {/* Buttons to go back and save results */}
-      <div className="mb-4 flex gap-4">
-        <button
-          onClick={() => router.push('/admin')}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
-        >
-          Return to Admin
-        </button>
-        <button
-          onClick={handleSaveResults}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition"
-        >
-          Save Results
-        </button>
-      </div>
-
-      {/* Progress Notification */}
-      {progress !== null && (
-        <div className="text-center text-lg mt-4">
-          Zipping files... {progress}% completed
+        {/* Buttons to go back and save results */}
+        <div className="mb-14 flex gap-4 flex-wrap justify-center">
+          <button
+            onClick={() => router.push("/admin")}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg shadow-lg hover:bg-green-500 transition-transform transform hover:scale-105"
+          >
+            Return to Admin
+          </button>
+          <button
+            onClick={handleSaveResults}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-500 transition-transform transform hover:scale-105 cursor-pointer"
+          >
+            <FaDownload className="text-lg" />
+            Save Results
+          </button>
         </div>
-      )}
 
-      {/* Results Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border">
-          <thead>
-            <tr>
-              {headers.map((question, index) => (
-                <th
-                  key={index}
-                  className="border px-4 py-2 font-semibold text-left whitespace-nowrap"
-                >
-                  {question}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((result, rowIndex) => (
-              <tr key={rowIndex}>
-                {headers.map((question, cellIndex) => (
-                  <td key={cellIndex} className="border px-4 py-2 whitespace-nowrap">
-                    {result[question]}
-                  </td>
+        {/* Progress Notification */}
+        {progress !== null && (
+          <div className="text-center text-2xl mt-4 mb-4">
+            Zipping files... {progress}% completed
+          </div>
+        )}
+
+        {/* Results Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border-2 border-gray-600">
+            <thead>
+              <tr>
+                {headers.map((question, index) => (
+                  <th
+                    key={index}
+                    className="border-2 border-gray-600 px-4 py-2 font-semibold text-left whitespace-nowrap"
+                  >
+                    {question}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {results.map((result, rowIndex) => (
+                <tr key={rowIndex}>
+                  {headers.map((question, cellIndex) => (
+                    <td
+                      key={cellIndex}
+                      className="border px-4 py-2 whitespace-nowrap"
+                    >
+                      {result[question]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
