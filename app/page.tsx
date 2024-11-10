@@ -1,4 +1,5 @@
-'use client'
+'use client';
+
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Survey } from '../types/survey';
@@ -6,49 +7,72 @@ import { Survey } from '../types/survey';
 export default function HomePage() {
   const router = useRouter();
   const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/surveys')
-      .then((res) => res.json())
-      .then((data) => setSurveys(data));
+    const fetchSurveys = async () => {
+      try {
+        const res = await fetch('/api/surveys');
+        if (!res.ok) {
+          throw new Error(`Error: ${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        setSurveys(data);
+      } catch (error) {
+        console.error('Failed to fetch surveys:', error);
+        setError('Failed to load surveys. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSurveys();
   }, []);
 
-  const visibleSurveys = surveys.filter(survey => survey.visible); // Filter surveys with visible set to true
+  const visibleSurveys = surveys.filter((survey) => survey.visible);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Welcome to the CDN Survey</h1>
-      <p className="mb-8">Please select a survey to participate:</p>
+    <div className="container mx-auto p-4 mt-14">
+      <h1 className="text-4xl font-bold mb-6 text-center md:text-6xl">
+        Welcome to the CDN Survey
+      </h1>
+      <p className="mb-20 text-lg text-center">
+        Please select a survey to participate:
+      </p>
 
-      {/* Button to Admin Page */}
-      <div className="mb-8">
-        <button
-          className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 transition"
-          onClick={() => router.push('/admin')}
-        >
-          Admin Dashboard
-        </button>
-      </div>
-
-      {/* List of Surveys or No Surveys Message */}
-      <div className="grid gap-4">
-        {visibleSurveys.length > 0 ? (
-          visibleSurveys.map((survey) => (
-            <div key={survey.id} className="p-4 border rounded-lg shadow">
-              <h2 className="text-xl font-bold">{survey.title}</h2>
-              <p>{survey.description}</p>
+      {isLoading ? (
+        <p className="text-center text-gray-600">Loading surveys...</p>
+      ) : error ? (
+        <p className="text-center text-red-600">{error}</p>
+      ) : visibleSurveys.length > 0 ? (
+        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {visibleSurveys.map((survey) => (
+            <div
+              key={survey.id}
+              className="flex flex-col justify-between p-7 border border-gray-200 rounded-xl bg-white shadow hover:shadow-lg transition-shadow duration-500"
+            >
+              <div>
+                <h2 className="text-2xl font-semibold mb-3 text-gray-800 text-center">
+                  {survey.title}
+                </h2>
+                <p className="text-gray-600 mb-5 text-center">{survey.description}</p>
+              </div>
               <button
-                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
+                className="mt-auto px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold duration-500"
                 onClick={() => router.push(`/survey/${survey.id}`)}
+                aria-label={`Take the survey titled ${survey.title}`}
               >
                 Take Survey
               </button>
             </div>
-          ))
-        ) : (
-          <p className="text-gray-600 text-center">No surveys available at the moment. Please check back later.</p>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-600 text-center">
+          No surveys available at the moment. Please check back later.
+        </p>
+      )}
     </div>
   );
 }
