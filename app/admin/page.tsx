@@ -25,7 +25,7 @@ export default function AdminDashboard() {
       try {
         const res = await fetch(`/api/surveys/${id}`, { method: "DELETE" });
         if (res.ok) {
-          setSurveys(surveys.filter((survey) => survey.id !== id));
+          setSurveys((prevSurveys) => prevSurveys.filter((survey) => survey.id !== id));
           alert("Survey deleted successfully");
         } else {
           console.error("Failed to delete survey");
@@ -36,7 +36,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const toggleVisibility = async (id: number, currentVisibility: boolean) => {
+  const toggleVisibility = async (id: number, currentVisibility: any) => {
     try {
       const res = await fetch(`/api/surveys/${id}/toggle-visibility`, {
         method: "PUT",
@@ -44,11 +44,9 @@ export default function AdminDashboard() {
         body: JSON.stringify({ visible: !currentVisibility }),
       });
       if (res.ok) {
-        setSurveys(
-          surveys.map((survey) =>
-            survey.id === id
-              ? { ...survey, visible: !currentVisibility }
-              : survey
+        setSurveys((prevSurveys) =>
+          prevSurveys.map((survey) =>
+            survey.id === id ? { ...survey, visible: !currentVisibility } : survey
           )
         );
         alert(`Survey ${!currentVisibility ? "shown" : "hidden"} successfully`);
@@ -71,7 +69,7 @@ export default function AdminDashboard() {
 
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${data.title || "survey"}.json`;
+      link.download = `${data.title || "survey"}-cdn-survey.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -81,11 +79,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleImportSurvey = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImportSurvey = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (!file.name.includes("cdn-survey")) {
+        alert("Invalid file. Please upload a JSON file with 'cdn-survey' in its name.");
+        event.target.value = "";
+        return;
+      }
+
       try {
         const fileData = await file.text();
         const importedSurvey = JSON.parse(fileData);
@@ -145,7 +147,6 @@ export default function AdminDashboard() {
         Admin Dashboard
       </h1>
 
-      {/* Import and Create Survey Buttons */}
       <div className="mb-10 flex gap-4 flex-wrap justify-center">
         <button
           className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg shadow-lg hover:bg-green-500 transition-transform transform hover:scale-105"
@@ -166,7 +167,6 @@ export default function AdminDashboard() {
         </label>
       </div>
 
-      {/* No Surveys Message */}
       {surveys.length === 0 ? (
         <div className="text-center text-gray-600 mt-10">
           <p className="text-lg">There are no surveys available.</p>
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {surveys.map((survey) => (
             <div
-              key={survey.id}
+              key={survey.id || survey.title} // Ensures a unique key even if id is missing
               className="flex flex-col p-6 border rounded-2xl shadow bg-white h-full"
             >
               <h2 className="text-xl font-bold mb-2 text-center">{survey.title}</h2>
@@ -187,10 +187,9 @@ export default function AdminDashboard() {
                 Status: {survey.visible ? "Visible" : "Hidden"}
               </p>
 
-              {/* Buttons to Edit, View Results, Delete, Toggle Visibility, and Export */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-4 sm:flex-wrap mt-auto">
                 <button
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-500 transition-transform transform hover:scale-105"
+                  className="flex items-center gap-2 px-5 py-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-500 transition-transform transform hover:scale-105"
                   onClick={() => router.push(`/admin/edit/${survey.id}`)}
                 >
                   <FaEdit className="text-lg" />
@@ -198,7 +197,7 @@ export default function AdminDashboard() {
                 </button>
 
                 <button
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow-md hover:bg-purple-500 transition-transform transform hover:scale-105"
+                  className="flex items-center gap-2 px-5 py-4 bg-purple-600 text-white rounded-lg shadow-md hover:bg-purple-500 transition-transform transform hover:scale-105"
                   onClick={() => router.push(`/admin/results/${survey.id}`)}
                 >
                   <FaEye className="text-lg" />
@@ -206,7 +205,7 @@ export default function AdminDashboard() {
                 </button>
 
                 <button
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-500 transition-transform transform hover:scale-105"
+                  className="flex items-center gap-2 px-5 py-4 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-500 transition-transform transform hover:scale-105"
                   onClick={() => handleDeleteSurvey(survey.id)}
                 >
                   <FaTrash className="text-lg" />
@@ -214,7 +213,7 @@ export default function AdminDashboard() {
                 </button>
 
                 <button
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-md hover:bg-gray-500 transition-transform transform hover:scale-105 ${
+                  className={`flex items-center gap-2 px-5 py-4 rounded-lg shadow-md hover:bg-gray-500 transition-transform transform hover:scale-105 ${
                     survey.visible ? "bg-gray-600" : "bg-gray-400"
                   } text-white`}
                   onClick={() => toggleVisibility(survey.id, survey.visible)}
@@ -233,7 +232,7 @@ export default function AdminDashboard() {
                 </button>
 
                 <button
-                  className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-400 transition-transform transform hover:scale-105"
+                  className="flex items-center gap-2 px-5 py-4 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-400 transition-transform transform hover:scale-105"
                   onClick={() => handleExportSurvey(survey.id)}
                 >
                   <FaDownload className="text-lg" />
