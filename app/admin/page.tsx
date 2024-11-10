@@ -1,8 +1,9 @@
-// /pages/admin/index.tsx
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Survey } from "../../types/survey";
+
+import { FaEdit, FaEye, FaTrash, FaEyeSlash, FaDownload, FaPlus, FaFileImport } from "react-icons/fa";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -40,12 +41,16 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/surveys/${id}/toggle-visibility`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visible: !currentVisibility })
+        body: JSON.stringify({ visible: !currentVisibility }),
       });
       if (res.ok) {
-        setSurveys(surveys.map(survey => 
-          survey.id === id ? { ...survey, visible: !currentVisibility } : survey
-        ));
+        setSurveys(
+          surveys.map((survey) =>
+            survey.id === id
+              ? { ...survey, visible: !currentVisibility }
+              : survey
+          )
+        );
         alert(`Survey ${!currentVisibility ? "shown" : "hidden"} successfully`);
       } else {
         console.error("Failed to toggle visibility");
@@ -59,7 +64,9 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/surveys/${id}`);
       const data = await res.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
 
       const link = document.createElement("a");
@@ -74,7 +81,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleImportSurvey = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportSurvey = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       try {
@@ -82,7 +91,9 @@ export default function AdminDashboard() {
         const importedSurvey = JSON.parse(fileData);
         importedSurvey.visible = false;
 
-        const existingSurvey = surveys.find((survey) => survey.title === importedSurvey.title);
+        const existingSurvey = surveys.find(
+          (survey) => survey.title === importedSurvey.title
+        );
 
         if (existingSurvey) {
           const overwrite = confirm(
@@ -129,18 +140,22 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Admin Dashboard</h1>
+    <div className="container mx-auto p-4 mt-14 mb-10">
+      <h1 className="text-4xl font-bold mb-6 text-center md:text-6xl">
+        Admin Dashboard
+      </h1>
 
       {/* Import and Create Survey Buttons */}
-      <div className="mb-6 flex gap-4">
+      <div className="mb-10 flex gap-4 flex-wrap justify-center">
         <button
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition"
+          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg shadow-lg hover:bg-green-500 transition-transform transform hover:scale-105"
           onClick={() => router.push("/admin/create")}
         >
+          <FaPlus className="text-xl" />
           Create New Survey
         </button>
-        <label className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition cursor-pointer">
+        <label className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-500 transition-transform transform hover:scale-105 cursor-pointer">
+          <FaFileImport className="text-xl" />
           Import Survey
           <input
             type="file"
@@ -155,55 +170,74 @@ export default function AdminDashboard() {
       {surveys.length === 0 ? (
         <div className="text-center text-gray-600 mt-10">
           <p className="text-lg">There are no surveys available.</p>
-          <p className="text-md">Please create a new survey or import an existing one.</p>
+          <p className="text-md">
+            Please create a new survey or import an existing one.
+          </p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {surveys.map((survey) => (
-            <div key={survey.id} className="p-4 border rounded-lg shadow">
-              <h2 className="text-xl font-bold mb-2">{survey.title}</h2>
-              <p className="text-sm mb-3">{survey.description}</p>
-              <p className="text-sm mb-3">
+            <div
+              key={survey.id}
+              className="flex flex-col p-6 border rounded-2xl shadow bg-white h-full"
+            >
+              <h2 className="text-xl font-bold mb-2 text-center">{survey.title}</h2>
+              <p className="text-sm mb-3 text-center">{survey.description}</p>
+              <p className="text-sm mb-5 text-center">
                 Status: {survey.visible ? "Visible" : "Hidden"}
               </p>
 
               {/* Buttons to Edit, View Results, Delete, Toggle Visibility, and Export */}
-              <div className="flex gap-4">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-4 sm:flex-wrap mt-auto">
                 <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-500 transition-transform transform hover:scale-105"
                   onClick={() => router.push(`/admin/edit/${survey.id}`)}
                 >
-                  Edit Survey
+                  <FaEdit className="text-lg" />
+                  Edit
                 </button>
 
                 <button
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow-md hover:bg-purple-500 transition-transform transform hover:scale-105"
                   onClick={() => router.push(`/admin/results/${survey.id}`)}
                 >
-                  View Results
+                  <FaEye className="text-lg" />
+                  Results
                 </button>
 
                 <button
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-500 transition-transform transform hover:scale-105"
                   onClick={() => handleDeleteSurvey(survey.id)}
                 >
-                  Delete Survey
+                  <FaTrash className="text-lg" />
+                  Delete
                 </button>
 
                 <button
-                  className={`px-4 py-2 rounded hover:bg-gray-500 transition ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-md hover:bg-gray-500 transition-transform transform hover:scale-105 ${
                     survey.visible ? "bg-gray-600" : "bg-gray-400"
                   } text-white`}
                   onClick={() => toggleVisibility(survey.id, survey.visible)}
                 >
-                  {survey.visible ? "Hide" : "Show"}
+                  {survey.visible ? (
+                    <>
+                      <FaEyeSlash className="text-lg" />
+                      Hide
+                    </>
+                  ) : (
+                    <>
+                      <FaEye className="text-lg" />
+                      Show
+                    </>
+                  )}
                 </button>
 
                 <button
-                  className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-400 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-400 transition-transform transform hover:scale-105"
                   onClick={() => handleExportSurvey(survey.id)}
                 >
-                  Export Survey
+                  <FaDownload className="text-lg" />
+                  Export
                 </button>
               </div>
             </div>
