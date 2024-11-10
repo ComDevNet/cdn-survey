@@ -6,7 +6,7 @@ export default function TextArea({ onChange }: TextAreaProps) {
   return (
     <textarea
       onChange={(e) => onChange(e.target.value)}
-      className="border px-2 py-1 rounded w-full mt-2"
+      className="border-2 px-3 py-3 rounded-xl w-full mt-1 border-gray-600"
       rows={4}
     />
   );

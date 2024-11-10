@@ -4,7 +4,11 @@ type CheckboxProps = {
   onChange: (value: string[]) => void;
 };
 
-export default function Checkbox({ options, selectedOptions, onChange }: CheckboxProps) {
+export default function Checkbox({
+  options,
+  selectedOptions,
+  onChange,
+}: CheckboxProps) {
   const handleCheckboxChange = (option: string) => {
     const updatedOptions = selectedOptions.includes(option)
       ? selectedOptions.filter((item) => item !== option)
@@ -15,7 +19,7 @@ export default function Checkbox({ options, selectedOptions, onChange }: Checkbo
   return (
     <div>
       {options.map((option, index) => (
-        <div key={index}>
+        <div key={index} className="flex items-center space-x-2">
           <input
             type="checkbox"
             id={`checkbox-${index}`}

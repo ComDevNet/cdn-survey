@@ -4,7 +4,11 @@ type RadioButtonProps = {
   onChange: (value: string) => void;
 };
 
-export default function RadioButton({ options, selectedOption, onChange }: RadioButtonProps) {
+export default function RadioButton({
+  options,
+  selectedOption,
+  onChange,
+}: RadioButtonProps) {
   return (
     <div>
       {options.map((option, index) => (
