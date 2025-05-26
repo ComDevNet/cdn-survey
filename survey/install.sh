@@ -26,6 +26,8 @@ sudo systemctl daemon-reload
 # Start the service
 sudo systemctl start cdnsurvey.service
 
+sudo systemctl restart cdnsurvey.service
+
 # Enable the service to start on boot
 sudo systemctl enable cdnsurvey.service
 
