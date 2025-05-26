@@ -172,6 +172,7 @@ export default function SurveyPage() {
                   />
                 ) : field.type === "radio" ? (
                   <RadioButton
+                    name={fieldName}
                     options={(field as RadioButtonField).options}
                     selectedOption={responses[fieldName] || ""}
                     onChange={(value) =>
