@@ -1,0 +1,10 @@
+2025-10-17 15:15:24 - --- Starting S3 Sync Check (Local Test) ---
+2025-10-17 15:15:25 - ✓ Internet connection detected.
+2025-10-17 15:15:29 - Syncing CSV files to s3://test1-s3-demo1-bucket1 ...
+2025-10-17 15:15:31 - ✓ SUCCESS: CSV sync complete.
+2025-10-17 15:15:31 - --- Sync Check Finished ---
+2025-10-17 15:19:02 - --- Starting S3 Sync Check (Local Test) ---
+2025-10-17 15:19:03 - ✓ Internet connection detected.
+2025-10-17 15:19:05 - Syncing CSV files to s3://test1-s3-demo1-bucket1 ...
+2025-10-17 15:19:09 - ✓ SUCCESS: CSV sync complete.
+2025-10-17 15:19:09 - --- Sync Check Finished ---

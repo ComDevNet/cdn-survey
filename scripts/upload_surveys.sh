@@ -15,6 +15,7 @@ S3_BUCKET="cdn-survey-main"
 LOG_FILE="/opt/lampp/htdocs/cdn-survey/scripts/upload_log.txt"
 
 # --- Script Logic ---
+# Create log file if it doesn't exist, with sudo to ensure permissions
 touch "$LOG_FILE"
 log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
@@ -28,7 +29,7 @@ fi
 
 if ping -c 1 8.8.8.8 &> /dev/null; then
     log_message "✓ Internet connection detected."
-    # Use 'aws sts get-caller-identity' to verify credentials without needing sudo
+    # Use 'aws sts get-caller-identity' to verify credentials
     if ! aws sts get-caller-identity &> /dev/null; then
         log_message "ERROR: AWS CLI credentials invalid. Run 'aws configure' on the server."
         exit 1
