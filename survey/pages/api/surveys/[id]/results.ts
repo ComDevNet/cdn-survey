@@ -5,6 +5,7 @@ import path from 'path';
 import formidable, { IncomingForm, Fields, Files } from 'formidable';
 import { createObjectCsvWriter } from 'csv-writer';
 import csvParser from 'csv-parser';
+import { getSurveyById } from '../../../../lib/data';
 
 // Ensure Next.js doesn’t parse the body (required for formidable)
 export const config = {
@@ -58,14 +59,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { fields, files } = await parseForm(req);
 
       // Process uploaded files and save the internal data/uploads path in the fields
+      const processedFields: Record<string, any> = {};
+      for (const key in fields) {
+        if (Array.isArray(fields[key])) {
+          processedFields[key] = (fields[key] as string[])[0]; // Take the first value for text inputs
+        } else {
+          processedFields[key] = fields[key];
+        }
+      }
+
       for (const key in files) {
         const file = files[key] as formidable.File | formidable.File[];
         if (Array.isArray(file)) {
           // Multiple files: Map to their respective internal paths
-          (fields as any)[key] = file.map(f => `data/uploads/${path.basename(f.filepath)}`);
+          processedFields[key] = file.map(f => `data/uploads/${path.basename(f.filepath)}`);
         } else if (file) {
           // Single file: Store as a single string with the internal path
-          (fields as any)[key] = `data/uploads/${path.basename(file.filepath)}`;
+          processedFields[key] = `data/uploads/${path.basename(file.filepath)}`;
         }
       }
 
@@ -74,12 +84,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         fs.mkdirSync(dataDirectory, { recursive: true });
       }
 
+      // Save result with timestamp and title
+      const surveyId = parseInt(id, 10);
+      const survey = getSurveyById(surveyId);
+      const surveyTitle = survey ? survey.title : 'survey';
+      
+      const timestampRaw = new Date().toISOString(); // Full ISO string
+      const timestampShort = timestampRaw.substring(0, 16); // "2025-12-10T11:05"
+      const timestampForFilename = timestampShort.replace(/:/g, '-');
+
+      // Add timestamp to the processed fields so it appears in CSV/JSON content
+      processedFields['Timestamp'] = timestampShort;
+
+      // Title in small caps and timestamp(date)
+      const sanitizedTitle = surveyTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const jsonFilename = `${sanitizedTitle}-${timestampForFilename}.json`;
+      const jsonFilePath = path.join(dataDirectory, jsonFilename);
+      
+      fs.writeFileSync(jsonFilePath, JSON.stringify(processedFields, null, 2));
+
       // Define the path to the results CSV file
       const filePath = path.join(dataDirectory, `${id}-results.csv`);
 
       // Prepare headers based on fields' keys
       const isFileExists = fs.existsSync(filePath);
-      const headers = Object.keys(fields).map((key) => ({ id: key, title: key }));
+      const headers = Object.keys(processedFields).map((key) => ({ id: key, title: key }));
 
       const csvWriter = createObjectCsvWriter({
         path: filePath,
@@ -92,7 +121,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Write actual data to the CSV
-      await csvWriter.writeRecords([fields]);
+      await csvWriter.writeRecords([processedFields]);
       return res.status(201).json({ message: 'Results saved successfully' });
 
     } else if (req.method === 'GET') {

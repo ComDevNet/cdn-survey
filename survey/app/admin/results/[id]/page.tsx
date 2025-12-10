@@ -14,6 +14,7 @@ export default function ResultsPage() {
   const router = useRouter();
   const { id } = useParams() as { id: string };
   const [results, setResults] = useState<SurveyResult[]>([]);
+  const [surveyTitle, setSurveyTitle] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<number | null>(null); // State to track zipping progress
 
@@ -40,6 +41,16 @@ export default function ResultsPage() {
 
   useEffect(() => {
     if (id) {
+      // Fetch survey details for title
+      fetch(`/api/surveys/${id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.title) {
+            setSurveyTitle(data.title);
+          }
+        })
+        .catch((error) => console.error("Error fetching survey details:", error));
+
       fetch(`/api/surveys/${id}/results-csv`)
         .then((res) => res.text())
         .then((csvText) => {
@@ -59,6 +70,30 @@ export default function ResultsPage() {
     const filePromises: Promise<void>[] = [];
     setProgress(0); // Initialize progress
 
+    const sanitizedTitle = surveyTitle
+      ? surveyTitle
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+          : "survey";
+
+        let timestamp = new Date().toISOString().substring(0, 16).replace(/:/g, "-");
+        // Try to use the first timestamp from results if available
+        if (results.length > 0 && results[0]["Timestamp"]) {
+          // Check if the timestamp is already formatted or needs formatting (CSV stores as string)
+          let firstTs = results[0]["Timestamp"];
+          // Simple check if it looks like a date
+          if (firstTs) {
+            // Ensure we use the short format "YYYY-MM-DDTHH:mm"
+            if (firstTs.length > 16) {
+              firstTs = firstTs.substring(0, 16);
+            }
+            timestamp = firstTs.replace(/:/g, "-").replace(/\./g, "-");
+          }
+        }
+
+        const baseFilename = `${sanitizedTitle}-${timestamp}`;
+
     // Add the original CSV file to the zip
     filePromises.push(
       fetch(`/api/surveys/${id}/results-csv`)
@@ -67,7 +102,7 @@ export default function ResultsPage() {
           return res.blob();
         })
         .then((blob) => {
-          zip.file(`survey_${id}_results.csv`, blob);
+          zip.file(`${baseFilename}.csv`, blob);
         })
     );
 
@@ -106,7 +141,7 @@ export default function ResultsPage() {
         setProgress(Math.round(metadata.percent));
       })
       .then((blob) => {
-        saveAs(blob, `survey_${id}_results.zip`);
+        saveAs(blob, `${baseFilename}.zip`);
         setProgress(null); // Reset progress after completion
       })
       .catch((error) => {
