@@ -8,6 +8,48 @@ import csvParser from 'csv-parser';
 import { v4 as uuidv4 } from 'uuid';
 import { getSurveyById } from '../../../../lib/data';
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const acquireLock = async (lockPath: string, retries = 100, delay = 50): Promise<void> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const fd = fs.openSync(lockPath, 'wx');
+      fs.closeSync(fd);
+      return;
+    } catch (error: any) {
+      if (error.code === 'EEXIST') {
+        // Check for stale lock
+        try {
+          const stats = fs.statSync(lockPath);
+          const now = Date.now();
+          if (now - stats.mtimeMs > 5000) { // 5 seconds timeout
+             try {
+               fs.unlinkSync(lockPath);
+               continue;
+             } catch (e) {
+               // Ignore unlink error
+             }
+          }
+        } catch (e) {
+          // Ignore stat error
+        }
+        await sleep(delay);
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error(`Could not acquire lock for ${lockPath}`);
+};
+
+const releaseLock = (lockPath: string) => {
+  try {
+    fs.unlinkSync(lockPath);
+  } catch (error: any) {
+    if (error.code !== 'ENOENT') console.error(`Error removing lock file: ${error}`);
+  }
+};
+
 // Ensure Next.js doesn’t parse the body (required for formidable)
 export const config = {
   api: {
@@ -108,48 +150,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Define the path to the results CSV file
       const filePath = path.join(dataDirectory, `${id}-results.csv`);
+      const lockPath = `${filePath}.lock`;
 
-      // Prepare headers based on fields' keys
-      const isFileExists = fs.existsSync(filePath);
-      
-      let headersList = Object.keys(processedFields);
-      let existingRecords: any[] = [];
-      let shouldRewrite = false;
+      try {
+        await acquireLock(lockPath);
 
-      if (isFileExists) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        const firstLine = fileContent.split('\n')[0];
+        // Prepare headers based on fields' keys
+        const isFileExists = fs.existsSync(filePath);
         
-        // Check if Timestamp is in the header
-        if (!firstLine.includes('Timestamp')) {
-           shouldRewrite = true;
-           
-           // Preserve existing headers
-           const existingHeaders = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-           existingHeaders.forEach(h => {
-                if (h && !headersList.includes(h)) headersList.push(h);
-           });
+        let headersList = Object.keys(processedFields);
+        let existingRecords: any[] = [];
+        let shouldRewrite = false;
 
-           existingRecords = await readResultsFile(filePath);
+        if (isFileExists) {
+          const fileContent = fs.readFileSync(filePath, 'utf-8');
+          const firstLine = fileContent.split('\n')[0];
+          
+          // Check if Timestamp is in the header
+          if (!firstLine.includes('Timestamp')) {
+             shouldRewrite = true;
+             
+             // Preserve existing headers
+             const existingHeaders = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+             existingHeaders.forEach(h => {
+                  if (h && !headersList.includes(h)) headersList.push(h);
+             });
+
+             existingRecords = await readResultsFile(filePath);
+          }
         }
+
+        const headers = headersList.map((key) => ({ id: key, title: key }));
+
+        const csvWriter = createObjectCsvWriter({
+          path: filePath,
+          header: headers,
+          append: isFileExists && !shouldRewrite, // Only append if file already exists AND we are not rewriting
+        });
+
+        if (shouldRewrite) {
+          await csvWriter.writeRecords(existingRecords);
+        } else if (!isFileExists) {
+          await csvWriter.writeRecords([]); // Ensure headers are added on the first row if new
+        }
+
+        // Write actual data to the CSV
+        await csvWriter.writeRecords([processedFields]);
+      } finally {
+        releaseLock(lockPath);
       }
-
-      const headers = headersList.map((key) => ({ id: key, title: key }));
-
-      const csvWriter = createObjectCsvWriter({
-        path: filePath,
-        header: headers,
-        append: isFileExists && !shouldRewrite, // Only append if file already exists AND we are not rewriting
-      });
-
-      if (shouldRewrite) {
-        await csvWriter.writeRecords(existingRecords);
-      } else if (!isFileExists) {
-        await csvWriter.writeRecords([]); // Ensure headers are added on the first row if new
-      }
-
-      // Write actual data to the CSV
-      await csvWriter.writeRecords([processedFields]);
+      
       return res.status(201).json({ message: 'Results saved successfully' });
 
     } else if (req.method === 'GET') {
