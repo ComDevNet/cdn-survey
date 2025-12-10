@@ -43,7 +43,10 @@ export default function ResultsPage() {
     if (id) {
       // Fetch survey details for title
       const titlePromise = fetch(`/api/surveys/${id}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch survey details");
+          return res.json();
+        })
         .then((data) => {
           if (data && data.title) {
             setSurveyTitle(data.title);
@@ -52,7 +55,10 @@ export default function ResultsPage() {
         .catch((error) => console.error("Error fetching survey details:", error));
 
       const resultsPromise = fetch(`/api/surveys/${id}/results-csv`)
-        .then((res) => res.text())
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch results CSV");
+          return res.text();
+        })
         .then((csvText) => {
           const parsedResults = parseCSV(csvText);
           setResults(parsedResults);

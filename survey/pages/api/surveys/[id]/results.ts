@@ -5,6 +5,7 @@ import path from 'path';
 import formidable, { IncomingForm, Fields, Files } from 'formidable';
 import { createObjectCsvWriter } from 'csv-writer';
 import csvParser from 'csv-parser';
+import { v4 as uuidv4 } from 'uuid';
 import { getSurveyById } from '../../../../lib/data';
 
 // Ensure Next.js doesn’t parse the body (required for formidable)
@@ -91,7 +92,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const timestampRaw = new Date().toISOString(); // Full ISO string
       const timestampShort = timestampRaw.substring(0, 16); // "2025-12-10T11:05"
-      const timestampForFilename = timestampShort.replace(/:/g, '-');
+      
+      // Use full timestamp with milliseconds and UUID to prevent collisions
+      const timestampForFilename = `${timestampRaw.replace(/[:.]/g, '-')}-${uuidv4()}`;
 
       // Add timestamp to the processed fields so it appears in CSV/JSON content
       processedFields['Timestamp'] = timestampShort;
@@ -108,15 +111,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Prepare headers based on fields' keys
       const isFileExists = fs.existsSync(filePath);
-      const headers = Object.keys(processedFields).map((key) => ({ id: key, title: key }));
+      
+      let headersList = Object.keys(processedFields);
+      let existingRecords: any[] = [];
+      let shouldRewrite = false;
+
+      if (isFileExists) {
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const firstLine = fileContent.split('\n')[0];
+        
+        // Check if Timestamp is in the header
+        if (!firstLine.includes('Timestamp')) {
+           shouldRewrite = true;
+           
+           // Preserve existing headers
+           const existingHeaders = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+           existingHeaders.forEach(h => {
+                if (h && !headersList.includes(h)) headersList.push(h);
+           });
+
+           existingRecords = await readResultsFile(filePath);
+        }
+      }
+
+      const headers = headersList.map((key) => ({ id: key, title: key }));
 
       const csvWriter = createObjectCsvWriter({
         path: filePath,
         header: headers,
-        append: isFileExists, // Only append if file already exists
+        append: isFileExists && !shouldRewrite, // Only append if file already exists AND we are not rewriting
       });
 
-      if (!isFileExists) {
+      if (shouldRewrite) {
+        await csvWriter.writeRecords(existingRecords);
+      } else if (!isFileExists) {
         await csvWriter.writeRecords([]); // Ensure headers are added on the first row if new
       }
 
