@@ -42,7 +42,7 @@ export default function ResultsPage() {
   useEffect(() => {
     if (id) {
       // Fetch survey details for title
-      fetch(`/api/surveys/${id}`)
+      const titlePromise = fetch(`/api/surveys/${id}`)
         .then((res) => res.json())
         .then((data) => {
           if (data && data.title) {
@@ -51,17 +51,19 @@ export default function ResultsPage() {
         })
         .catch((error) => console.error("Error fetching survey details:", error));
 
-      fetch(`/api/surveys/${id}/results-csv`)
+      const resultsPromise = fetch(`/api/surveys/${id}/results-csv`)
         .then((res) => res.text())
         .then((csvText) => {
           const parsedResults = parseCSV(csvText);
           setResults(parsedResults);
-          setLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching results:", error);
-          setLoading(false);
         });
+
+      Promise.all([titlePromise, resultsPromise]).finally(() => {
+        setLoading(false);
+      });
     }
   }, [id]);
 
