@@ -5,6 +5,50 @@ import path from 'path';
 import formidable, { IncomingForm, Fields, Files } from 'formidable';
 import { createObjectCsvWriter } from 'csv-writer';
 import csvParser from 'csv-parser';
+import { v4 as uuidv4 } from 'uuid';
+import { getSurveyById } from '../../../../lib/data';
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const acquireLock = async (lockPath: string, retries = 100, delay = 50): Promise<void> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const fd = fs.openSync(lockPath, 'wx');
+      fs.closeSync(fd);
+      return;
+    } catch (error: any) {
+      if (error.code === 'EEXIST') {
+        // Check for stale lock
+        try {
+          const stats = fs.statSync(lockPath);
+          const now = Date.now();
+          if (now - stats.mtimeMs > 5000) { // 5 seconds timeout
+             try {
+               fs.unlinkSync(lockPath);
+               continue;
+             } catch (e) {
+               // Ignore unlink error
+             }
+          }
+        } catch (e) {
+          // Ignore stat error
+        }
+        await sleep(delay);
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error(`Could not acquire lock for ${lockPath}`);
+};
+
+const releaseLock = (lockPath: string) => {
+  try {
+    fs.unlinkSync(lockPath);
+  } catch (error: any) {
+    if (error.code !== 'ENOENT') console.error(`Error removing lock file: ${error}`);
+  }
+};
 
 // Ensure Next.js doesn’t parse the body (required for formidable)
 export const config = {
@@ -58,14 +102,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { fields, files } = await parseForm(req);
 
       // Process uploaded files and save the internal data/uploads path in the fields
+      const processedFields: Record<string, any> = {};
+      for (const key in fields) {
+        if (Array.isArray(fields[key])) {
+          processedFields[key] = (fields[key] as string[])[0]; // Take the first value for text inputs
+        } else {
+          processedFields[key] = fields[key];
+        }
+      }
+
       for (const key in files) {
         const file = files[key] as formidable.File | formidable.File[];
         if (Array.isArray(file)) {
           // Multiple files: Map to their respective internal paths
-          (fields as any)[key] = file.map(f => `data/uploads/${path.basename(f.filepath)}`);
+          processedFields[key] = file.map(f => `data/uploads/${path.basename(f.filepath)}`);
         } else if (file) {
           // Single file: Store as a single string with the internal path
-          (fields as any)[key] = `data/uploads/${path.basename(file.filepath)}`;
+          processedFields[key] = `data/uploads/${path.basename(file.filepath)}`;
         }
       }
 
@@ -74,25 +127,79 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         fs.mkdirSync(dataDirectory, { recursive: true });
       }
 
+      // Save result with timestamp and title
+      const surveyId = parseInt(id, 10);
+      const survey = getSurveyById(surveyId);
+      const surveyTitle = survey ? survey.title : 'survey';
+      
+      const timestampRaw = new Date().toISOString(); // Full ISO string
+      const timestampShort = timestampRaw.substring(0, 16); // "2025-12-10T11:05"
+      
+      // Use full timestamp with milliseconds and UUID to prevent collisions
+      const timestampForFilename = `${timestampRaw.replace(/[:.]/g, '-')}-${uuidv4()}`;
+
+      // Add timestamp to the processed fields so it appears in CSV/JSON content
+      processedFields['Timestamp'] = timestampShort;
+
+      // Title in small caps and timestamp(date)
+      const sanitizedTitle = surveyTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const jsonFilename = `${sanitizedTitle}-${timestampForFilename}.json`;
+      const jsonFilePath = path.join(dataDirectory, jsonFilename);
+      
+      fs.writeFileSync(jsonFilePath, JSON.stringify(processedFields, null, 2));
+
       // Define the path to the results CSV file
       const filePath = path.join(dataDirectory, `${id}-results.csv`);
+      const lockPath = `${filePath}.lock`;
 
-      // Prepare headers based on fields' keys
-      const isFileExists = fs.existsSync(filePath);
-      const headers = Object.keys(fields).map((key) => ({ id: key, title: key }));
+      try {
+        await acquireLock(lockPath);
 
-      const csvWriter = createObjectCsvWriter({
-        path: filePath,
-        header: headers,
-        append: isFileExists, // Only append if file already exists
-      });
+        // Prepare headers based on fields' keys
+        const isFileExists = fs.existsSync(filePath);
+        
+        let headersList = Object.keys(processedFields);
+        let existingRecords: any[] = [];
+        let shouldRewrite = false;
 
-      if (!isFileExists) {
-        await csvWriter.writeRecords([]); // Ensure headers are added on the first row if new
+        if (isFileExists) {
+          const fileContent = fs.readFileSync(filePath, 'utf-8');
+          const firstLine = fileContent.split('\n')[0];
+          
+          // Check if Timestamp is in the header
+          if (!firstLine.includes('Timestamp')) {
+             shouldRewrite = true;
+             
+             // Preserve existing headers
+             const existingHeaders = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+             existingHeaders.forEach(h => {
+                  if (h && !headersList.includes(h)) headersList.push(h);
+             });
+
+             existingRecords = await readResultsFile(filePath);
+          }
+        }
+
+        const headers = headersList.map((key) => ({ id: key, title: key }));
+
+        const csvWriter = createObjectCsvWriter({
+          path: filePath,
+          header: headers,
+          append: isFileExists && !shouldRewrite, // Only append if file already exists AND we are not rewriting
+        });
+
+        if (shouldRewrite) {
+          await csvWriter.writeRecords(existingRecords);
+        } else if (!isFileExists) {
+          await csvWriter.writeRecords([]); // Ensure headers are added on the first row if new
+        }
+
+        // Write actual data to the CSV
+        await csvWriter.writeRecords([processedFields]);
+      } finally {
+        releaseLock(lockPath);
       }
-
-      // Write actual data to the CSV
-      await csvWriter.writeRecords([fields]);
+      
       return res.status(201).json({ message: 'Results saved successfully' });
 
     } else if (req.method === 'GET') {
