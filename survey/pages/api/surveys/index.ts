@@ -33,6 +33,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
       // Read and parse surveys
       const surveys = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
+      // Sort surveys by creation time (newest first)
+      surveys.sort((a: any, b: any) => b.id - a.id);
       res.status(200).json(surveys);
     } else {
       res.setHeader('Allow', ['POST', 'GET']);
