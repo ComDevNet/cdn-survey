@@ -142,7 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       processedFields['Timestamp'] = timestampShort;
 
       // Title in small caps and timestamp(date)
-      const sanitizedTitle = surveyTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const sanitizedTitle = (surveyTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')) || 'survey';
       const jsonFilename = `${sanitizedTitle}-${timestampForFilename}.json`;
       const jsonFilePath = path.join(dataDirectory, jsonFilename);
       
@@ -158,26 +158,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Prepare headers based on fields' keys
         const isFileExists = fs.existsSync(filePath);
         
-        let headersList = Object.keys(processedFields);
+        let headersList: string[] = [];
         let existingRecords: any[] = [];
         let shouldRewrite = false;
 
         if (isFileExists) {
           const fileContent = fs.readFileSync(filePath, 'utf-8');
-          const firstLine = fileContent.split('\n')[0];
+          const lines = fileContent.split('\n');
+          const firstLine = lines[0];
           
-          // Check if Timestamp is in the header
-          if (!firstLine.includes('Timestamp')) {
-             shouldRewrite = true;
-             
-             // Preserve existing headers
-             const existingHeaders = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-             existingHeaders.forEach(h => {
-                  if (h && !headersList.includes(h)) headersList.push(h);
-             });
+          // Use a more robust regex to split CSV headers, accounting for quoted values
+          const headersMatch = firstLine.match(/(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g);
+          const existingHeaders = headersMatch?.map((header) => 
+            header.replace(/^,/, '').replace(/^"|"$/g, '').replace(/""/g, '"').trim()
+          ) || [];
+          
+          headersList = [...existingHeaders];
+          
+          // Add any new fields from current submission to headersList
+          Object.keys(processedFields).forEach(key => {
+            if (!headersList.includes(key)) {
+              headersList.push(key);
+              shouldRewrite = true; // New column requires rewriting the header row
+            }
+          });
 
-             existingRecords = await readResultsFile(filePath);
+          // Also rewrite if Timestamp was missing (migration)
+          if (!firstLine.includes('Timestamp')) {
+            shouldRewrite = true;
           }
+
+          if (shouldRewrite) {
+            existingRecords = await readResultsFile(filePath);
+          }
+        } else {
+          headersList = Object.keys(processedFields);
         }
 
         const headers = headersList.map((key) => ({ id: key, title: key }));
@@ -189,13 +204,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         if (shouldRewrite) {
-          await csvWriter.writeRecords(existingRecords);
-        } else if (!isFileExists) {
-          await csvWriter.writeRecords([]); // Ensure headers are added on the first row if new
+          // Fix Bug 1: Combine existing records and the new record for a single write call.
+          // This prevents the second writeRecords call from overwriting the file and losing historical data when append is false.
+          await csvWriter.writeRecords([...existingRecords, processedFields]);
+        } else {
+          // For new files (append: false) or existing files (append: true), a single writeRecords call is sufficient.
+          // csv-writer handles writing headers automatically for new files.
+          await csvWriter.writeRecords([processedFields]);
         }
-
-        // Write actual data to the CSV
-        await csvWriter.writeRecords([processedFields]);
       } finally {
         releaseLock(lockPath);
       }

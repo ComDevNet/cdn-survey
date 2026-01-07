@@ -78,12 +78,12 @@ export default function ResultsPage() {
     const filePromises: Promise<void>[] = [];
     setProgress(0); // Initialize progress
 
-    const sanitizedTitle = surveyTitle
+    const sanitizedTitle = (surveyTitle
       ? surveyTitle
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)/g, "")
-          : "survey";
+      : "survey") || "survey";
 
         let timestamp = new Date().toISOString().substring(0, 16).replace(/:/g, "-");
         // Try to use the first timestamp from results if available
