@@ -50,6 +50,20 @@ export interface EmailField {
   required?: boolean;
 }
 
+export interface SelectField {
+  type: "select";
+  question: string;
+  options: string[];
+  required?: boolean;
+}
+
+export interface RatingField {
+  type: "rating";
+  question: string;
+  maxRating?: number; // Default typically 5 or 10
+  required?: boolean;
+}
+
 export type SurveyField =
   | TextField
   | TextAreaField
@@ -58,7 +72,9 @@ export type SurveyField =
   | DateField
   | NumberField
   | FileUploadField
-  | EmailField;
+  | EmailField
+  | SelectField
+  | RatingField;
 
 export interface Survey {
   visible: any;

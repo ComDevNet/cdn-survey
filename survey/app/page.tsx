@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Survey } from '../types/survey';
+import { FiArrowRight, FiClipboard } from 'react-icons/fi';
 
 export default function HomePage() {
   const router = useRouter();
@@ -14,9 +15,7 @@ export default function HomePage() {
     const fetchSurveys = async () => {
       try {
         const res = await fetch('/api/surveys');
-        if (!res.ok) {
-          throw new Error(`Error: ${res.status} ${res.statusText}`);
-        }
+        if (!res.ok) throw new Error(`Error: ${res.status} ${res.statusText}`);
         const data = await res.json();
         setSurveys(data);
       } catch (error) {
@@ -26,53 +25,80 @@ export default function HomePage() {
         setIsLoading(false);
       }
     };
-
     fetchSurveys();
   }, []);
 
   const visibleSurveys = surveys.filter((survey) => survey.visible);
 
   return (
-    <div className="container mx-auto p-4 mt-14">
-      <h1 className="text-4xl font-bold mb-6 text-center md:text-6xl">
-        Welcome to the CDN Survey
-      </h1>
-      <p className="mb-20 text-lg text-center">
-        Please select a survey to participate:
-      </p>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Hero */}
+      <div className="pt-20 pb-12 px-4 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-sm font-semibold mb-6">
+          <FiClipboard className="opacity-80" />
+          Community Development Network
+        </div>
+        <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-4 leading-tight">
+          CDN Survey Portal
+        </h1>
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+          Select a survey below to share your feedback and help us build stronger communities.
+        </p>
+      </div>
 
-      {isLoading ? (
-        <p className="text-center text-gray-600">Loading surveys...</p>
-      ) : error ? (
-        <p className="text-center text-red-600">{error}</p>
-      ) : visibleSurveys.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {visibleSurveys.map((survey) => (
-            <div
-              key={survey.id}
-              className="flex flex-col justify-between p-7 border border-gray-200 rounded-xl bg-white shadow hover:shadow-lg transition-shadow duration-500"
-            >
-              <div>
-                <h2 className="text-2xl font-semibold mb-3 text-gray-800 text-center">
-                  {survey.title}
-                </h2>
-                <p className="text-gray-600 mb-5 text-center">{survey.description}</p>
-              </div>
-              <button
-                className="mt-auto px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold duration-500"
+      {/* Survey Grid */}
+      <div className="container mx-auto px-4 pb-20 max-w-5xl">
+        {isLoading ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-card border border-border rounded-3xl animate-pulse" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <p className="text-destructive font-semibold text-lg">{error}</p>
+          </div>
+        ) : visibleSurveys.length > 0 ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleSurveys.map((survey) => (
+              <div
+                key={survey.id}
+                className="group flex flex-col justify-between p-7 border border-border rounded-3xl bg-card shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-300 cursor-pointer"
                 onClick={() => router.push(`/survey/${survey.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(`/survey/${survey.id}`)}
                 aria-label={`Take the survey titled ${survey.title}`}
               >
-                Take Survey
-              </button>
+                <div>
+                  <h2 className="text-xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors">
+                    {survey.title}
+                  </h2>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                    {survey.description}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between mt-auto">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {survey.formFields?.length ?? 0} question{survey.formFields?.length !== 1 ? 's' : ''}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-sm font-bold text-primary group-hover:gap-3 transition-all">
+                    Begin <FiArrowRight className="transition-transform group-hover:translate-x-1" />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <div className="inline-flex flex-col items-center gap-4 bg-card border border-border rounded-3xl p-12 shadow-sm max-w-sm mx-auto">
+              <FiClipboard className="text-5xl text-muted-foreground/50" />
+              <p className="text-lg font-semibold text-foreground">No surveys available</p>
+              <p className="text-muted-foreground text-sm">Check back later or contact your administrator.</p>
             </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-600 text-center">
-          No surveys available at the moment. Please check back later.
-        </p>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
