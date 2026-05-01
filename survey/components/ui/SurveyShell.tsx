@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import ProgressIndicator from "./ProgressIndicator";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 
@@ -21,6 +21,21 @@ export default function SurveyShell({
   children,
   title
 }: SurveyShellProps) {
+  
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Trigger next when Enter is pressed and not in a textarea
+      if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        if (canGoNext && currentStep < totalSteps) {
+          onNext();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onNext, canGoNext, currentStep, totalSteps]);
   
   return (
     <div className="min-h-screen bg-background flex flex-col pt-16 md:pt-24 pb-32 md:pb-40 px-4 select-none relative w-full overflow-x-hidden">

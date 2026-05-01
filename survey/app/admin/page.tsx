@@ -8,6 +8,7 @@ import { FaEdit, FaEye, FaTrash, FaEyeSlash, FaDownload, FaPlus, FaFileImport } 
 export default function AdminDashboard() {
   const router = useRouter();
   const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchSurveys();
@@ -141,12 +142,27 @@ export default function AdminDashboard() {
     }
   };
 
+  const filteredSurveys = surveys.filter((survey) =>
+    survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    survey.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
       <div className="container mx-auto p-4 pt-14 mb-10">
         <h1 className="font-heading text-4xl font-bold mb-6 text-center md:text-6xl text-foreground">
           Admin Dashboard
         </h1>
+
+        <div className="mb-8 flex justify-center">
+          <input
+            type="text"
+            placeholder="Search surveys..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full max-w-md px-6 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+          />
+        </div>
 
       <div className="mb-10 flex gap-4 flex-wrap justify-center">
         <button
@@ -175,9 +191,13 @@ export default function AdminDashboard() {
             Please create a new survey or import an existing one.
           </p>
         </div>
+      ) : filteredSurveys.length === 0 ? (
+        <div className="text-center text-muted-foreground mt-10">
+          <p className="text-lg">No surveys match your search.</p>
+        </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {surveys.map((survey) => (
+          {filteredSurveys.map((survey) => (
             <div
               key={survey.id || survey.title}
               className="flex flex-col p-6 border border-border rounded-3xl shadow-sm bg-card text-card-foreground h-full transition-shadow hover:shadow-md"
