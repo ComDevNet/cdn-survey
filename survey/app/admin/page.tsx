@@ -142,20 +142,21 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 mt-14 mb-10">
-      <h1 className="text-4xl font-bold mb-6 text-center md:text-6xl">
-        Admin Dashboard
-      </h1>
+    <div className="min-h-screen bg-background text-foreground pb-20">
+      <div className="container mx-auto p-4 pt-14 mb-10">
+        <h1 className="font-heading text-4xl font-bold mb-6 text-center md:text-6xl text-foreground">
+          Admin Dashboard
+        </h1>
 
       <div className="mb-10 flex gap-4 flex-wrap justify-center">
         <button
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg shadow-lg hover:bg-green-500 transition-transform transform hover:scale-105"
+          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-transform transform hover:scale-105"
           onClick={() => router.push("/admin/create")}
         >
           <FaPlus className="text-xl" />
           Create New Survey
         </button>
-        <label className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-500 transition-transform transform hover:scale-105 cursor-pointer">
+        <label className="flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-transform transform hover:scale-105 cursor-pointer">
           <FaFileImport className="text-xl" />
           Import Survey
           <input
@@ -168,75 +169,71 @@ export default function AdminDashboard() {
       </div>
 
       {surveys.length === 0 ? (
-        <div className="text-center text-gray-600 mt-10">
+        <div className="text-center text-muted-foreground mt-10">
           <p className="text-lg">There are no surveys available.</p>
           <p className="text-md">
             Please create a new survey or import an existing one.
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           {surveys.map((survey) => (
             <div
-              key={survey.id || survey.title} // Ensures a unique key even if id is missing
-              className="flex flex-col p-6 border rounded-2xl shadow bg-white h-full"
+              key={survey.id || survey.title}
+              className="flex flex-col p-6 border border-border rounded-3xl shadow-sm bg-card text-card-foreground h-full transition-shadow hover:shadow-md"
             >
-              <h2 className="text-xl font-bold mb-2 text-center">{survey.title}</h2>
-              <p className="text-sm mb-3 text-center">{survey.description}</p>
-              <p className="text-sm mb-5 text-center">
-                Status: {survey.visible ? "Visible" : "Hidden"}
+              <h2 className="font-heading text-xl font-bold mb-2 text-center text-foreground">{survey.title}</h2>
+              <p className="text-sm mb-4 text-center text-muted-foreground">{survey.description}</p>
+              <p className="text-xs font-semibold mb-6 text-center px-4 py-1.5 bg-secondary text-secondary-foreground rounded-full w-fit mx-auto border border-border/50">
+                Status: <span className="font-bold tracking-wide">{survey.visible ? "VISIBLE" : "HIDDEN"}</span>
               </p>
 
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-4 sm:flex-wrap mt-auto">
+              <div className="grid grid-cols-2 gap-3 mt-auto">
                 <button
-                  className="flex items-center gap-2 px-5 py-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-500 transition-transform transform hover:scale-105"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50"
                   onClick={() => router.push(`/admin/edit/${survey.id}`)}
                 >
-                  <FaEdit className="text-lg" />
-                  Edit
+                  <FaEdit className="text-lg opacity-80" /> Edit
                 </button>
 
                 <button
-                  className="flex items-center gap-2 px-5 py-4 bg-purple-600 text-white rounded-lg shadow-md hover:bg-purple-500 transition-transform transform hover:scale-105"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50"
                   onClick={() => router.push(`/admin/results/${survey.id}`)}
                 >
-                  <FaEye className="text-lg" />
-                  Results
+                  <FaEye className="text-lg opacity-80" /> Results
                 </button>
 
                 <button
-                  className="flex items-center gap-2 px-5 py-4 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-500 transition-transform transform hover:scale-105"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-destructive text-destructive-foreground font-semibold rounded-xl shadow-sm hover:bg-destructive/90 transition-all"
                   onClick={() => handleDeleteSurvey(survey.id)}
                 >
-                  <FaTrash className="text-lg" />
-                  Delete
+                  <FaTrash className="text-lg opacity-80" /> Delete
                 </button>
 
                 <button
-                  className={`flex items-center gap-2 px-5 py-4 rounded-lg shadow-md hover:bg-gray-500 transition-transform transform hover:scale-105 ${
-                    survey.visible ? "bg-gray-600" : "bg-gray-400"
-                  } text-white`}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-xl border transition-all ${
+                    survey.visible ? "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80 hover:border-primary/50" : "bg-muted text-muted-foreground border-transparent hover:bg-secondary hover:text-secondary-foreground"
+                  }`}
                   onClick={() => toggleVisibility(survey.id, survey.visible)}
                 >
                   {survey.visible ? (
                     <>
-                      <FaEyeSlash className="text-lg" />
+                      <FaEyeSlash className="text-lg opacity-80" />
                       Hide
                     </>
                   ) : (
                     <>
-                      <FaEye className="text-lg" />
+                      <FaEye className="text-lg opacity-80" />
                       Show
                     </>
                   )}
                 </button>
 
                 <button
-                  className="flex items-center gap-2 px-5 py-4 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-400 transition-transform transform hover:scale-105"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50 col-span-2"
                   onClick={() => handleExportSurvey(survey.id)}
                 >
-                  <FaDownload className="text-lg" />
-                  Export
+                  <FaDownload className="text-lg opacity-80" /> Export JSON
                 </button>
               </div>
             </div>
@@ -244,5 +241,6 @@ export default function AdminDashboard() {
         </div>
       )}
     </div>
+  </div>
   );
 }

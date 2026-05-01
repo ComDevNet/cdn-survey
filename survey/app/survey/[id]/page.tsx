@@ -1,52 +1,156 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import TextInput from "../../../components/TextInput";
-import TextArea from "../../../components/TextArea";
-import RadioButton from "../../../components/RadioButton";
-import Checkbox from "../../../components/Checkbox";
-import FileUpload from "../../../components/FileUpload";
-import {
-  Survey,
-  SurveyField,
-  RadioButtonField,
-  CheckboxField,
-} from "../../../types/survey";
+import { Survey } from "../../../types/survey";
+
+// Hooks
+import { useSurveyState } from "../../../hooks/useSurveyState";
+
+// Components
+import SurveyShell from "../../../components/ui/SurveyShell";
+import QuestionCard from "../../../components/ui/QuestionCard";
+import NetworkStatusBanner from "../../../components/ui/NetworkStatusBanner";
+import LoadingState from "../../../components/ui/LoadingState";
+import SurveyCompletionScreen from "../../../components/ui/SurveyCompletionScreen";
+import ReviewScreen from "../../../components/ui/ReviewScreen";
+
+// Inputs
+import InputText from "../../../components/ui/InputText";
+import InputTextarea from "../../../components/ui/InputTextarea";
+import InputRadioGroup from "../../../components/ui/InputRadioGroup";
+import InputCheckboxGroup from "../../../components/ui/InputCheckboxGroup";
+import InputSelect from "../../../components/ui/InputSelect";
+import RatingScale from "../../../components/ui/RatingScale";
+import InputFile from "../../../components/ui/InputFile";
 
 export default function SurveyPage() {
   const params = useParams();
   const router = useRouter();
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  
   const [survey, setSurvey] = useState<Survey | null>(null);
-  const [responses, setResponses] = useState<Record<string, any>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [isFetching, setIsFetching] = useState(true);
+  const [fetchError, setFetchError] = useState("");
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetch(`/api/surveys/${id}`)
-        .then((res) => res.json())
-        .then((data) => setSurvey(data))
-        .catch(() => setErrorMessage("Failed to load survey."));
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load");
+          return res.json();
+        })
+        .then((data) => {
+          setSurvey(data);
+          setIsFetching(false);
+        })
+        .catch(() => {
+          setFetchError("Failed to load survey. Please check your connection.");
+          setIsFetching(false);
+        });
     }
   }, [id]);
 
-  const validateField = (field: SurveyField, value: any) => {
-    let error = "";
-    if (field.required && !value) {
-      error = `Question is required`;
-    } else if (field.type === "email" && value && !/\S+@\S+\.\S+/.test(value)) {
-      error = "Please enter a valid email address";
+  const surveyState = useSurveyState({ survey: survey as Survey });
+
+  if (isFetching) {
+    return (
+      <div className="min-h-screen pt-24 bg-background">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (fetchError || !survey) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 text-center">
+        <div>
+          <h2 className="text-2xl font-bold text-destructive mb-2">Error</h2>
+          <p className="text-muted-foreground mb-6">{fetchError || "Survey not found."}</p>
+          <button 
+            onClick={() => router.push("/")}
+            className="px-6 py-3 bg-secondary text-foreground rounded-xl hover:bg-secondary/80"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen pt-24 bg-background px-4">
+        <SurveyCompletionScreen onReturnHome={() => router.push("/")} />
+      </div>
+    );
+  }
+
+  const {
+    currentStep,
+    totalSteps,
+    currentField,
+    responses,
+    errors,
+    isOffline,
+    isSubmitting,
+    setIsSubmitting,
+    handleResponseChange,
+    nextStep,
+    prevStep,
+    setStep,
+    validateCurrentStep,
+    isReviewStep
+  } = surveyState;
+
+  const handleSubmit = async () => {
+    // Cannot submit if offline
+    if (isOffline) return;
+
+    setIsSubmitting(true);
+    
+    try {
+      const formData = new FormData();
+      for (const field of survey.formFields) {
+        const responseValue = responses[field.question];
+        if (Array.isArray(responseValue)) {
+          formData.append(field.question, responseValue.length > 0 ? responseValue.join(", ") : "");
+        } else if (field.type === "file" && responseValue?.url) {
+          formData.append(field.question, responseValue.url);
+        } else {
+          formData.append(field.question, String(responseValue || ""));
+        }
+      }
+
+      const response = await fetch(`/api/surveys/${id}/results`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        setIsCompleted(true);
+      } else {
+        alert("Failed to submit survey. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while submitting.");
+    } finally {
+      setIsSubmitting(false);
     }
-    return error;
   };
 
-  const handleFileUpload = async (file: File, fieldName: string) => {
+  const handleFileUpload = async (file: File) => {
+    // Only upload if connected
+    if (isOffline) {
+       alert("Files cannot be uploaded while offline. Please connect and try again.");
+       return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
+    setIsSubmitting(true);
     try {
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -55,196 +159,132 @@ export default function SurveyPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setResponses((prevResponses) => ({
-          ...prevResponses,
-          [fieldName]: data.url,
-        }));
+        handleResponseChange({ name: file.name, url: data.url });
       } else {
-        console.error("File upload failed");
-        setErrorMessage("File upload failed");
+        alert("File upload failed");
       }
     } catch (error) {
       console.error("Error uploading file:", error);
-      setErrorMessage("An error occurred during file upload");
+      alert("An error occurred during file upload");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setSuccessMessage("");
-    setErrorMessage("");
-
-    const newErrors: Record<string, string> = {};
-    survey?.formFields.forEach((field) => {
-      const error = validateField(field, responses[field.question]);
-      if (error) {
-        newErrors[field.question] = error;
+  const handleNextWithAutoAdvance = (type: string) => {
+    return (val: any) => {
+      handleResponseChange(val);
+      if (type === "radio" || type === "rating") {
+        setTimeout(() => {
+          nextStep();
+        }, 500); // Wait half a second for user to see selection
       }
-    });
-
-    if (Object.keys(newErrors).length === 0) {
-      try {
-        const formData = new FormData();
-
-        if (!survey) return;
-        for (const field of survey.formFields) {
-          const responseValue = responses[field.question];
-
-          if (field.type === "checkbox") {
-            formData.append(
-              field.question,
-              Array.isArray(responseValue) && responseValue.length > 0
-                ? responseValue.join(", ")
-                : ""
-            );
-          } else if (field.type === "radio") {
-            formData.append(field.question, responseValue || "");
-          } else if (field.type === "file") {
-            // Append the file URL (already uploaded) if present
-            formData.append(field.question, responseValue || ""); // Append URL or empty string
-          } else if (field.type === "textarea") {
-            const formattedResponse = String(responseValue || "").replace(
-              /\n/g,
-              ", "
-            );
-            formData.append(field.question, formattedResponse);
-          } else {
-            formData.append(field.question, String(responseValue || ""));
-          }
-        }
-
-        const response = await fetch(`/api/surveys/${id}/results`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (response.ok) {
-          setSuccessMessage("Survey submitted successfully!");
-          setTimeout(() => router.push("/"), 1000);
-        } else {
-          setErrorMessage("Failed to submit survey. Please try again.");
-        }
-      } catch (err) {
-        console.error("Error submitting survey:", err);
-        setErrorMessage("An error occurred while submitting the survey.");
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      setErrors(newErrors);
-      setIsLoading(false);
-    }
+    };
   };
 
-  if (!survey) return <p>Loading survey...</p>;
+  const renderField = () => {
+    if (isReviewStep) {
+      return (
+        <ReviewScreen 
+          survey={survey} 
+          responses={responses} 
+          onSubmit={handleSubmit} 
+          onEdit={setStep}
+          isSubmitting={isSubmitting}
+          isOffline={isOffline}
+        />
+      );
+    }
+
+    if (!currentField) return null;
+
+    const value = responses[currentField.question] || "";
+    const error = errors[currentField.question];
+
+    return (
+      <QuestionCard field={currentField}>
+        {currentField.type === "radio" && (
+           <InputRadioGroup 
+             options={currentField.options || []}
+             value={value}
+             onChange={handleNextWithAutoAdvance("radio")}
+             error={error}
+           />
+        )}
+        
+        {currentField.type === "checkbox" && (
+           <InputCheckboxGroup 
+             options={currentField.options || []}
+             values={Array.isArray(value) ? value : []}
+             onChange={handleResponseChange}
+             error={error}
+           />
+        )}
+        
+        {currentField.type === "select" && (
+           <InputSelect
+             options={currentField.options || []}
+             value={value}
+             onChange={(e) => handleResponseChange(e.target.value)}
+             error={error}
+           />
+        )}
+        
+        {currentField.type === "rating" && (
+           <RatingScale
+             maxRating={currentField.maxRating || 10}
+             value={value}
+             onChange={handleNextWithAutoAdvance("rating")}
+             error={error}
+           />
+        )}
+        
+        {currentField.type === "textarea" && (
+           <InputTextarea
+             value={value}
+             onChange={(e) => handleResponseChange(e.target.value)}
+             error={error}
+             placeholder="Type your answer here..."
+           />
+        )}
+        
+        {(currentField.type === "text" || currentField.type === "email" || currentField.type === "number" || currentField.type === "date") && (
+           <InputText
+             type={currentField.type}
+             value={value}
+             onChange={(e) => handleResponseChange(e.target.value)}
+             error={error}
+             placeholder={currentField.type === "email" ? "name@example.com" : "Type your answer here..."}
+           />
+        )}
+        
+        {currentField.type === "file" && (
+           <InputFile
+             value={value}
+             onChange={(file: File | null) => {
+               if (file) handleFileUpload(file);
+               else handleResponseChange(null);
+             }}
+             error={error}
+           />
+        )}
+      </QuestionCard>
+    );
+  };
 
   return (
-    <div className="container mx-auto p-4 mt-10 mb-5">
-      <div className="bg-white p-5 mb-10 rounded-2xl">
-        <h1 className="text-4xl capitalize font-bold mb-4 mt-4 text-center">{survey.title}</h1>
-        <h2 className="mb-5 text-lg text-center">{survey.description}</h2>
-
-        <hr className="border-t-2 border-gray-300 rounded-full my-4 mb-5" />
-
-        {isLoading && <p>Loading...</p>}
-        {successMessage && <p className="text-green-500 font-semibold">{successMessage}</p>}
-        {errorMessage && <p className="text-red-500 font-semibold">{errorMessage}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {survey.formFields.map((field, index) => {
-            const fieldName = field.question;
-
-            return (
-              <div key={index} className="mb-6">
-                <label className="block text-lg font-medium mb-2">
-                  {fieldName}
-                </label>
-                {field.type === "checkbox" ? (
-                  <Checkbox
-                    options={(field as CheckboxField).options}
-                    selectedOptions={responses[fieldName] || []}
-                    onChange={(updatedOptions) =>
-                      setResponses({
-                        ...responses,
-                        [fieldName]: updatedOptions,
-                      })
-                    }
-                  />
-                ) : field.type === "radio" ? (
-                  <RadioButton
-                    name={fieldName}
-                    options={(field as RadioButtonField).options}
-                    selectedOption={responses[fieldName] || ""}
-                    onChange={(value) =>
-                      setResponses({ ...responses, [fieldName]: value })
-                    }
-                  />
-                ) : field.type === "date" ? (
-                  <input
-                    type="date"
-                    className="border-2 px-3 py-3 rounded-xl w-full mt-3 border-gray-600"
-                    onChange={(e) =>
-                      setResponses({
-                        ...responses,
-                        [fieldName]: e.target.value,
-                      })
-                    }
-                  />
-                ) : field.type === "number" ? (
-                  <input
-                    type="number"
-                    className="border-2 px-3 py-3 rounded-xl w-full mt-3 border-gray-600"
-                    onChange={(e) =>
-                      setResponses({
-                        ...responses,
-                        [fieldName]: e.target.value,
-                      })
-                    }
-                  />
-                ) : field.type === "file" ? (
-                  <FileUpload
-                    onChange={(file) =>
-                      file && setResponses({ ...responses, [fieldName]: file })
-                    }
-                  />
-                ) : field.type === "email" ? (
-                  <input
-                    type="email"
-                    className="border-2 px-3 py-3 rounded-xl w-full mt-3 border-gray-600"
-                    onChange={(e) =>
-                      setResponses({
-                        ...responses,
-                        [fieldName]: e.target.value,
-                      })
-                    }
-                  />
-                ) : field.type === "textarea" ? (
-                  <TextArea
-                    onChange={(value) =>
-                      setResponses({ ...responses, [fieldName]: value })
-                    }
-                  />
-                ) : (
-                  <TextInput
-                    onChange={(value) =>
-                      setResponses({ ...responses, [fieldName]: value })
-                    }
-                  />
-                )}
-                {errors[fieldName] && (
-                  <p className="text-red-500">{errors[fieldName]}</p>
-                )}
-              </div>
-            );
-          })}
-          <button
-            type="submit"
-            className="w-full md:w-auto px-4 py-3 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-150"
-          >
-            Submit Survey
-          </button>
-        </form>
-      </div>
-    </div>
+    <>
+      <NetworkStatusBanner isOffline={isOffline} />
+      <SurveyShell
+        title={survey.title}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        onNext={nextStep}
+        onPrev={prevStep}
+        canGoNext={true} // In single-step interfaces, 'next' often just triggers validation
+      >
+        {renderField()}
+      </SurveyShell>
+    </>
   );
 }
