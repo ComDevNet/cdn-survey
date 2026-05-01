@@ -3,7 +3,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Survey } from "../../types/survey";
 
-import { FaEdit, FaEye, FaTrash, FaEyeSlash, FaDownload, FaPlus, FaFileImport } from "react-icons/fa";
+import {
+  FaEdit,
+  FaEye,
+  FaTrash,
+  FaEyeSlash,
+  FaDownload,
+  FaPlus,
+  FaFileImport,
+} from "react-icons/fa";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -26,7 +34,9 @@ export default function AdminDashboard() {
       try {
         const res = await fetch(`/api/surveys/${id}`, { method: "DELETE" });
         if (res.ok) {
-          setSurveys((prevSurveys) => prevSurveys.filter((survey) => survey.id !== id));
+          setSurveys((prevSurveys) =>
+            prevSurveys.filter((survey) => survey.id !== id),
+          );
           alert("Survey deleted successfully");
         } else {
           console.error("Failed to delete survey");
@@ -47,8 +57,10 @@ export default function AdminDashboard() {
       if (res.ok) {
         setSurveys((prevSurveys) =>
           prevSurveys.map((survey) =>
-            survey.id === id ? { ...survey, visible: !currentVisibility } : survey
-          )
+            survey.id === id
+              ? { ...survey, visible: !currentVisibility }
+              : survey,
+          ),
         );
         alert(`Survey ${!currentVisibility ? "shown" : "hidden"} successfully`);
       } else {
@@ -80,11 +92,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleImportSurvey = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportSurvey = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       if (!file.name.includes("cdn-survey")) {
-        alert("Invalid file. Please upload a JSON file with 'cdn-survey' in its name.");
+        alert(
+          "Invalid file. Please upload a JSON file with 'cdn-survey' in its name.",
+        );
         event.target.value = "";
         return;
       }
@@ -95,12 +111,12 @@ export default function AdminDashboard() {
         importedSurvey.visible = false;
 
         const existingSurvey = surveys.find(
-          (survey) => survey.title === importedSurvey.title
+          (survey) => survey.title === importedSurvey.title,
         );
 
         if (existingSurvey) {
           const overwrite = confirm(
-            `A survey with the title "${importedSurvey.title}" already exists. Do you want to overwrite it?`
+            `A survey with the title "${importedSurvey.title}" already exists. Do you want to overwrite it?`,
           );
 
           if (overwrite) {
@@ -142,9 +158,10 @@ export default function AdminDashboard() {
     }
   };
 
-  const filteredSurveys = surveys.filter((survey) =>
-    survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    survey.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSurveys = surveys.filter(
+    (survey) =>
+      survey.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      survey.description.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -164,103 +181,112 @@ export default function AdminDashboard() {
           />
         </div>
 
-      <div className="mb-10 flex gap-4 flex-wrap justify-center">
-        <button
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-transform transform hover:scale-105"
-          onClick={() => router.push("/admin/create")}
-        >
-          <FaPlus className="text-xl" />
-          Create New Survey
-        </button>
-        <label className="flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-transform transform hover:scale-105 cursor-pointer">
-          <FaFileImport className="text-xl" />
-          Import Survey
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleImportSurvey}
-            className="hidden"
-          />
-        </label>
-      </div>
-
-      {surveys.length === 0 ? (
-        <div className="text-center text-muted-foreground mt-10">
-          <p className="text-lg">There are no surveys available.</p>
-          <p className="text-md">
-            Please create a new survey or import an existing one.
-          </p>
+        <div className="mb-10 flex gap-4 flex-wrap justify-center">
+          <button
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-transform transform hover:scale-105"
+            onClick={() => router.push("/admin/create")}
+          >
+            <FaPlus className="text-xl" />
+            Create New Survey
+          </button>
+          <label className="flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-transform transform hover:scale-105 cursor-pointer">
+            <FaFileImport className="text-xl" />
+            Import Survey
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImportSurvey}
+              className="hidden"
+            />
+          </label>
         </div>
-      ) : filteredSurveys.length === 0 ? (
-        <div className="text-center text-muted-foreground mt-10">
-          <p className="text-lg">No surveys match your search.</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {filteredSurveys.map((survey) => (
-            <div
-              key={survey.id || survey.title}
-              className="flex flex-col p-6 border border-border rounded-3xl shadow-sm bg-card text-card-foreground h-full transition-shadow hover:shadow-md"
-            >
-              <h2 className="font-heading text-xl font-bold mb-2 text-center text-foreground">{survey.title}</h2>
-              <p className="text-sm mb-4 text-center text-muted-foreground">{survey.description}</p>
-              <p className="text-xs font-semibold mb-6 text-center px-4 py-1.5 bg-secondary text-secondary-foreground rounded-full w-fit mx-auto border border-border/50">
-                Status: <span className="font-bold tracking-wide">{survey.visible ? "VISIBLE" : "HIDDEN"}</span>
-              </p>
 
-              <div className="grid grid-cols-2 gap-3 mt-auto">
-                <button
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50"
-                  onClick={() => router.push(`/admin/edit/${survey.id}`)}
-                >
-                  <FaEdit className="text-lg opacity-80" /> Edit
-                </button>
+        {surveys.length === 0 ? (
+          <div className="text-center text-muted-foreground mt-10">
+            <p className="text-lg">There are no surveys available.</p>
+            <p className="text-md">
+              Please create a new survey or import an existing one.
+            </p>
+          </div>
+        ) : filteredSurveys.length === 0 ? (
+          <div className="text-center text-muted-foreground mt-10">
+            <p className="text-lg">No surveys match your search.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            {filteredSurveys.map((survey) => (
+              <div
+                key={survey.id || survey.title}
+                className="flex flex-col p-6 border border-border rounded-3xl shadow-sm bg-card text-card-foreground h-full transition-shadow hover:shadow-md"
+              >
+                <h2 className="font-heading text-xl font-bold mb-2 text-center text-foreground">
+                  {survey.title}
+                </h2>
+                <p className="text-sm mb-4 text-center text-muted-foreground">
+                  {survey.description}
+                </p>
+                <p className="text-xs font-semibold mb-6 text-center px-4 py-1.5 bg-secondary text-secondary-foreground rounded-full w-fit mx-auto border border-border/50">
+                  Status:{" "}
+                  <span className="font-bold tracking-wide">
+                    {survey.visible ? "VISIBLE" : "HIDDEN"}
+                  </span>
+                </p>
 
-                <button
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50"
-                  onClick={() => router.push(`/admin/results/${survey.id}`)}
-                >
-                  <FaEye className="text-lg opacity-80" /> Results
-                </button>
+                <div className="grid grid-cols-2 gap-3 mt-auto">
+                  <button
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50"
+                    onClick={() => router.push(`/admin/edit/${survey.id}`)}
+                  >
+                    <FaEdit className="text-lg opacity-80" /> Edit
+                  </button>
 
-                <button
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-destructive text-destructive-foreground font-semibold rounded-xl shadow-sm hover:bg-destructive/90 transition-all"
-                  onClick={() => handleDeleteSurvey(survey.id)}
-                >
-                  <FaTrash className="text-lg opacity-80" /> Delete
-                </button>
+                  <button
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50"
+                    onClick={() => router.push(`/admin/results/${survey.id}`)}
+                  >
+                    <FaEye className="text-lg opacity-80" /> Results
+                  </button>
 
-                <button
-                  className={`flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-xl border transition-all ${
-                    survey.visible ? "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80 hover:border-primary/50" : "bg-muted text-muted-foreground border-transparent hover:bg-secondary hover:text-secondary-foreground"
-                  }`}
-                  onClick={() => toggleVisibility(survey.id, survey.visible)}
-                >
-                  {survey.visible ? (
-                    <>
-                      <FaEyeSlash className="text-lg opacity-80" />
-                      Hide
-                    </>
-                  ) : (
-                    <>
-                      <FaEye className="text-lg opacity-80" />
-                      Show
-                    </>
-                  )}
-                </button>
+                  <button
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-destructive text-destructive-foreground font-semibold rounded-xl shadow-sm hover:bg-destructive/90 transition-all"
+                    onClick={() => handleDeleteSurvey(survey.id)}
+                  >
+                    <FaTrash className="text-lg opacity-80" /> Delete
+                  </button>
 
-                <button
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50 col-span-2"
-                  onClick={() => handleExportSurvey(survey.id)}
-                >
-                  <FaDownload className="text-lg opacity-80" /> Export JSON
-                </button>
+                  <button
+                    className={`flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-xl border transition-all ${
+                      survey.visible
+                        ? "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80 hover:border-primary/50"
+                        : "bg-muted text-muted-foreground border-transparent hover:bg-secondary hover:text-secondary-foreground"
+                    }`}
+                    onClick={() => toggleVisibility(survey.id, survey.visible)}
+                  >
+                    {survey.visible ? (
+                      <>
+                        <FaEyeSlash className="text-lg opacity-80" />
+                        Hide
+                      </>
+                    ) : (
+                      <>
+                        <FaEye className="text-lg opacity-80" />
+                        Show
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-semibold rounded-xl border border-border shadow-sm hover:bg-secondary/80 transition-all hover:border-primary/50 col-span-2"
+                    onClick={() => handleExportSurvey(survey.id)}
+                  >
+                    <FaDownload className="text-lg opacity-80" /> Export JSON
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
   );
 }

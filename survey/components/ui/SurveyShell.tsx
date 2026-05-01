@@ -19,9 +19,8 @@ export default function SurveyShell({
   onPrev,
   canGoNext,
   children,
-  title
+  title,
 }: SurveyShellProps) {
-  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Trigger next when Enter is pressed and not in a textarea
@@ -36,7 +35,7 @@ export default function SurveyShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onNext, canGoNext, currentStep, totalSteps]);
-  
+
   return (
     <div className="min-h-screen bg-background flex flex-col pt-16 md:pt-24 pb-32 md:pb-40 px-4 select-none relative w-full overflow-x-hidden">
       <div className="w-full max-w-lg mx-auto mb-8 text-center px-4">
@@ -44,12 +43,12 @@ export default function SurveyShell({
           {title}
         </h1>
       </div>
-      
+
       <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-      
+
       {/* The main content area */}
       <div className="flex-grow flex flex-col justify-start relative w-full">
-         {children}
+        {children}
       </div>
 
       {/* Floating Action Navigation */}
@@ -59,9 +58,11 @@ export default function SurveyShell({
             onClick={onPrev}
             disabled={currentStep === 0}
             className={`flex items-center justify-center p-4 rounded-xl font-bold transition-all text-lg
-              ${currentStep === 0 
-                ? 'opacity-0 pointer-events-none' 
-                : 'bg-secondary text-foreground hover:bg-secondary/80'}`}
+              ${
+                currentStep === 0
+                  ? "opacity-0 pointer-events-none"
+                  : "bg-secondary text-foreground hover:bg-secondary/80"
+              }`}
             aria-label="Previous question"
           >
             <FiArrowLeft size={24} className="mr-2" />
@@ -72,9 +73,11 @@ export default function SurveyShell({
             <button
               onClick={onNext}
               className={`flex items-center justify-center py-4 px-8 rounded-xl font-bold transition-all text-lg flex-1 max-w-[200px] ml-4
-                ${canGoNext 
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transform hover:scale-[1.02]' 
-                  : 'bg-secondary text-muted-foreground'}`}
+                ${
+                  canGoNext
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transform hover:scale-[1.02]"
+                    : "bg-secondary text-muted-foreground"
+                }`}
               aria-label="Next question"
             >
               <span className="mr-2 text-xl tracking-wide">Next</span>
